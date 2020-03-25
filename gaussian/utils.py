@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import torch
 
-from experiments.dataloaders import *
+from dataloaders import *
 
 import datetime
 import socket, sys, os
