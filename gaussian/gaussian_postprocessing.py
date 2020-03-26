@@ -80,6 +80,11 @@ def get_runs(experiment_folder):
             run_acc_pot_dir[curr_dir] = acc_potentials_step
         except:
             print(root)
+            with open(os.path.join(root, config_name), "r") as f:
+                config = yaml.safe_load(f)
+            acc_potentials_step = get_last(os.path.join(root, run_file_name))
+            run_config_dir[curr_dir] = config
+            run_acc_pot_dir[curr_dir] = acc_potentials_step
 
     return run_acc_pot_dir, run_config_dir
 
@@ -110,6 +115,14 @@ def get_eig(experiment_folder, step, use_gpu=False):
                 eigenvalue_dict[curr_dir][k] = (eigenvals, eigenvecs)
         except:
             print(root)
+            curr_dir = os.path.basename(root)
+            eigenvalue_dict[curr_dir] = {}
+            models_dict = get_models(root, step)
+            # get eigenvals
+            for k, m in models_dict.items():
+                eigenvals, eigenvecs = compute_hessian_eigenthings(m, dataloader,
+                                                                   loss, num_eigenthings, use_gpu=use_gpu)
+                eigenvalue_dict[curr_dir][k] = (eigenvals, eigenvecs)
 
     return eigenvalue_dict
 
