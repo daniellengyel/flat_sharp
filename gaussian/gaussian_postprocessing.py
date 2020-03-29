@@ -73,14 +73,14 @@ def get_runs(experiment_folder):
 
         # get acc-potentials
         try:
-            with open(os.path.join(root, config_name), "r") as f:
+            with open(os.path.join(root, config_name), "rb") as f:
                 config = yaml.safe_load(f)
             acc_potentials_step = get_last(os.path.join(root, run_file_name))
             run_config_dir[curr_dir] = config
             run_acc_pot_dir[curr_dir] = acc_potentials_step
         except:
             print(root)
-            with open(os.path.join(root, config_name), "r") as f:
+            with open(os.path.join(root, config_name), "rb") as f:
                 config = yaml.safe_load(f)
             acc_potentials_step = get_last(os.path.join(root, run_file_name))
             run_config_dir[curr_dir] = config
@@ -97,7 +97,7 @@ def get_eig(experiment_folder, step, use_gpu=False):
     with open(os.path.join(experiment_folder, "data.pkl"), "rb") as f:
         data = pickle.load(f)
 
-    dataloader = DataLoader(data[0], batch_size=16, shuffle=True)  # fix the batch size
+    dataloader = DataLoader(data[0], batch_size=len(data[0]), shuffle=True)  # fix the batch size
 
     # iterate through models
     for root, dirs, files in os.walk("{}/models".format(experiment_folder), topdown=False):
@@ -111,7 +111,7 @@ def get_eig(experiment_folder, step, use_gpu=False):
             # get eigenvals
             for k, m in models_dict.items():
                 eigenvals, eigenvecs = compute_hessian_eigenthings(m, dataloader,
-                                                                   loss, num_eigenthings, use_gpu=use_gpu)
+                                                                   loss, num_eigenthings, use_gpu=use_gpu, mode="lanczos")
                 eigenvalue_dict[curr_dir][k] = (eigenvals, eigenvecs)
         except:
             print(root)
@@ -121,9 +121,12 @@ def get_eig(experiment_folder, step, use_gpu=False):
             # get eigenvals
             for k, m in models_dict.items():
                 eigenvals, eigenvecs = compute_hessian_eigenthings(m, dataloader,
-                                                                   loss, num_eigenthings, use_gpu=use_gpu)
+                                                                   loss, num_eigenthings, use_gpu=use_gpu, mode="lanczos")
                 eigenvalue_dict[curr_dir][k] = (eigenvals, eigenvecs)
 
+            :qprint(curr_dir)
+            with open(os.path.join(experiment_folder, "tmp.pkl"), "wb") as f:
+                pickle.dump(eigenvalue_dict, f)
     return eigenvalue_dict
 
 
