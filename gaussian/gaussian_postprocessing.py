@@ -38,14 +38,20 @@ def temp_tb_to_dict(path_to_events_file):
 
 def get_models(model_folder_path, step):
     nets_dict = {}
+
+    largest_step = -float("inf")
     for root, dirs, files in os.walk(model_folder_path):
         for name in files:
             name_split_underscore = name.split("_")
+            largest_step = max(int(name_split_underscore[-1].split(".")[0]), largest_step)
+
             if name_split_underscore[-1].split(".")[0] == str(step):
                 file_path = os.path.join(root, name)
                 with open(file_path, "rb") as f:
                     net = torch.load(f)
                 nets_dict[name_split_underscore[1]] = net
+    if step == -1:
+        return get_models(model_folder_path, largest_step)
     return nets_dict
 
 def get_last_acc_potential(nets_dict_potential, nets_dict_acc, potential_type="total"):
@@ -124,7 +130,7 @@ def get_eig(experiment_folder, step, use_gpu=False):
                                                                    loss, num_eigenthings, use_gpu=use_gpu, mode="lanczos")
                 eigenvalue_dict[curr_dir][k] = (eigenvals, eigenvecs)
 
-            :qprint(curr_dir)
+            print(curr_dir)
             with open(os.path.join(experiment_folder, "tmp.pkl"), "wb") as f:
                 pickle.dump(eigenvalue_dict, f)
     return eigenvalue_dict

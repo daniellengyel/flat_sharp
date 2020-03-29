@@ -78,14 +78,16 @@ folder_path = os.path.join(os.getcwd(), "gaussian_experiments", "Mar25_21-01-10_
 
 runs = get_runs(folder_path)
 
-last_step = list(runs[0].values())[2]
-
-eig = get_eig(folder_path, last_step, use_gpu=True)
-
 os.mkdir(os.path.join(folder_path, "analysis"))
 
 with open(os.path.join(folder_path, "analysis", "runs.pkl"), "wb") as f:
     pickle.dump(runs, f)
+
+print("Run Analysis Done.")
+
+eig = get_eig(folder_path, -1, use_gpu=True)
+
+print("Eig Analysis Done.")
 
 with open(os.path.join(folder_path, "analysis", "eig.pkl"), "wb") as f:
     pickle.dump(eig, f)
