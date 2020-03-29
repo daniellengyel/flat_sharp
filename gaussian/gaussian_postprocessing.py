@@ -86,11 +86,6 @@ def get_runs(experiment_folder):
             run_acc_pot_dir[curr_dir] = acc_potentials_step
         except:
             print(root)
-            with open(os.path.join(root, config_name), "rb") as f:
-                config = yaml.safe_load(f)
-            acc_potentials_step = get_last(os.path.join(root, run_file_name))
-            run_config_dir[curr_dir] = config
-            run_acc_pot_dir[curr_dir] = acc_potentials_step
 
     return run_acc_pot_dir, run_config_dir
 
