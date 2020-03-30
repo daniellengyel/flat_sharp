@@ -107,27 +107,28 @@ def get_eig(experiment_folder, step, use_gpu=False):
 
         try:
             curr_dir = os.path.basename(root)
+            print(curr_dir)
+
             eigenvalue_dict[curr_dir] = {}
             models_dict = get_models(root, step)
             # get eigenvals
             for k, m in models_dict.items():
                 eigenvals, eigenvecs = compute_hessian_eigenthings(m, dataloader,
-                                                                   loss, num_eigenthings, use_gpu=use_gpu, mode="lanczos")
+                                                                   loss, num_eigenthings, use_gpu=use_gpu, mode="lanczos", max_steps=20)
                 eigenvalue_dict[curr_dir][k] = (eigenvals, eigenvecs)
         except:
-            print(root)
-            curr_dir = os.path.basename(root)
-            eigenvalue_dict[curr_dir] = {}
-            models_dict = get_models(root, step)
             # get eigenvals
-            for k, m in models_dict.items():
-                eigenvals, eigenvecs = compute_hessian_eigenthings(m, dataloader,
-                                                                   loss, num_eigenthings, use_gpu=use_gpu, mode="lanczos")
-                eigenvalue_dict[curr_dir][k] = (eigenvals, eigenvecs)
+            # in case it didn't converge
+            try:
+                for k, m in models_dict.items():
+                    eigenvals, eigenvecs = compute_hessian_eigenthings(m, dataloader,
+                                                                       loss, num_eigenthings, use_gpu=use_gpu, mode="lanczos", max_steps=40)
+                    eigenvalue_dict[curr_dir][k] = (eigenvals, eigenvecs)
+            except:
+                print("error!")
 
-            print(curr_dir)
-            with open(os.path.join(experiment_folder, "tmp.pkl"), "wb") as f:
-                pickle.dump(eigenvalue_dict, f)
+        with open(os.path.join(experiment_folder, "tmp.pkl"), "wb") as f:
+            pickle.dump(eigenvalue_dict, f)
     return eigenvalue_dict
 
 
