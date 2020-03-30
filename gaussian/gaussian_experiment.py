@@ -76,16 +76,16 @@ import pickle
 # save analysis processsing
 folder_path = os.path.join(os.getcwd(), "gaussian_experiments", "Mar25_21-01-10_kingfisher.doc.ic.ac.uk")
 
-runs = get_runs(folder_path)
-
-os.mkdir(os.path.join(folder_path, "analysis"))
-
-with open(os.path.join(folder_path, "analysis", "runs.pkl"), "wb") as f:
-    pickle.dump(runs, f)
+# runs = get_runs(folder_path)
+#
+# os.mkdir(os.path.join(folder_path, "analysis"))
+#
+# with open(os.path.join(folder_path, "analysis", "runs.pkl"), "wb") as f:
+#     pickle.dump(runs, f)
 
 print("Run Analysis Done.")
 
-eig = get_eig(folder_path, -1, use_gpu=True)
+eig = get_eig(folder_path, -1, use_gpu=False)
 
 print("Eig Analysis Done.")
 
