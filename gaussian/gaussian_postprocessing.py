@@ -36,7 +36,7 @@ def temp_tb_to_dict(path_to_events_file):
 
     return nets_dict_potential, nets_dict_acc
 
-def get_models(model_folder_path, step):
+def get_models_old(model_folder_path, step):
     nets_dict = {}
 
     largest_step = -float("inf")
@@ -51,8 +51,35 @@ def get_models(model_folder_path, step):
                     net = torch.load(f)
                 nets_dict[name_split_underscore[1]] = net
     if step == -1:
-        return get_models(model_folder_path, largest_step)
+        return get_models_old(model_folder_path, largest_step)
     return nets_dict
+
+
+def get_models(model_folder_path, step):
+    if step == -1:
+        largest_step = -float("inf")
+        for root, dirs, files in os.walk(model_folder_path):
+            for sample_step_dir in dirs:
+                name_split_underscore = sample_step_dir.split("_")
+                if len(name_split_underscore) == 1:
+                    continue
+                largest_step = max(int(name_split_underscore[-1]), largest_step)
+
+        step = largest_step
+
+    resample_path = os.path.join(model_folder_path, "step_{}".format(step))
+
+    nets_dict = {}
+    for root, dirs, files in os.walk(os.path.join(resample_path, "models")):
+        for net_file_name in files:
+            net_idx = net_file_name.split("_")[1].split(".")[0]
+            with open(os.path.join(root, net_file_name), "rb") as f:
+                net = torch.load(f)
+            nets_dict[net_idx] = net
+    with open(os.path.join(resample_path, "sampled_idx.pkl"), "rb") as f:
+        sampled_idx = pickle.load(f)
+
+    return nets_dict, sampled_idx
 
 def get_last_acc_potential(nets_dict_potential, nets_dict_acc, potential_type="total"):
     w = []
@@ -89,8 +116,20 @@ def get_runs(experiment_folder):
 
     return run_acc_pot_dir, run_config_dir
 
-# get eigenvalues of final model.
-def get_eig(experiment_folder, step, use_gpu=False):
+def get_configs(experiment_folder):
+    config_dir = {}
+    for root, dirs, files in os.walk("{}/runs".format(experiment_folder), topdown=False):
+        if len(files) != 2:
+            continue
+        curr_dir = os.path.basename(root)
+        with open(os.path.join(root, "config.yml"), "rb") as f:
+            config = yaml.safe_load(f)
+        config_dir[curr_dir] = config
+
+    return config_dir
+
+# get eigenvalues of specific model folder.
+def get_eig_old(experiment_folder, step, use_gpu=False):
     # init
     eigenvalue_dict = {}
     num_eigenthings = 5  # compute top 5 eigenvalues/eigenvectors
@@ -132,9 +171,126 @@ def get_eig(experiment_folder, step, use_gpu=False):
     return eigenvalue_dict
 
 
+# get eigenvalues of specific model folder.
+def _get_eig(models, train_loader, test_loader, loss, num_eigenthings=5, use_gpu=False):
+    eig_dict = {}
+    acc_dict = {}
+    # get eigenvals
+    for k, m in models.items():
+        try:
+            eigenvals, eigenvecs = compute_hessian_eigenthings(m, train_loader,
+                                                               loss, num_eigenthings, use_gpu=use_gpu, mode="lanczos",
+                                                               max_steps=100)
+            eig_dict[k] = (eigenvals, eigenvecs)
+            acc_dict[k] = get_net_accuracy(m, test_loader)
+        except:
+            print("Error for net {}.".format(k))
+
+    return eig_dict, acc_dict
+
+
+# get eigenvalues of specific model folder.
+def get_eig(experiment_folder, step, use_gpu=False):
+    # init
+    eigenvalue_dict = {}
+    acc_dict = {}
+    num_eigenthings = 5  # compute top 5 eigenvalues/eigenvectors
+    loss = torch.nn.CrossEntropyLoss()
+    with open(os.path.join(experiment_folder, "data.pkl"), "rb") as f:
+        data = pickle.load(f)
+
+    train_loader = DataLoader(data[0], batch_size=len(data[0]), shuffle=True)  # fix the batch size
+    test_loader = DataLoader(data[1], batch_size=len(data[1]))
+    # iterate through models
+    for curr_dir in os.listdir("{}/resampling".format(experiment_folder)):
+        root = os.path.join("{}/resampling".format(experiment_folder), curr_dir)
+        print(curr_dir)
+        models_dict, sampled_idx = get_models(root, step)
+        eigenvalue_dict[curr_dir], acc_dict[curr_dir] = _get_eig(models_dict, train_loader, test_loader, loss, num_eigenthings, use_gpu)
+
+        with open(os.path.join(experiment_folder, "eig_tmp.pkl"), "wb") as f:
+            pickle.dump(eigenvalue_dict, f)
+        with open(os.path.join(experiment_folder, "acc_tmp.pkl"), "wb") as f:
+            pickle.dump(acc_dict, f)
+    return eigenvalue_dict, acc_dict
+
+def main(experiment_name):
+    # # # save analysis processsing
+    # folder_path = os.path.join(os.getcwd(), "gaussian_experiments", experiment_name)
+    #
+    # runs = get_runs(folder_path)
+    #
+    # # get runs
+    # os.mkdir(os.path.join(folder_path, "analysis"))
+    #
+    # with open(os.path.join(folder_path, "analysis", "runs.pkl"), "wb") as f:
+    #     pickle.dump(runs, f)
+    #
+    # print("Run Analysis Done.")
+    #
+    # # get eigenvalues
+    # eig = get_eig(folder_path, -1, use_gpu=False)
+    #
+    # print("Eig Analysis Done.")
+    #
+    # with open(os.path.join(folder_path, "analysis", "eig.pkl"), "wb") as f:
+    #     pickle.dump(eig, f)
+    experiment_folder = "/Users/daniellengyel/flat_sharp/gaussian/gaussian_experiments/Apr03_17-38-00_Daniels-MacBook-Pro-4.local"
+    # get_eig(experiment_folder, -1)
+
+    # errors
+    errs = ["1585931450.079084",
+            "1585938556.9890182",
+            "1585930974.450449",
+            "1585928292.0912151",
+            "1585928292.195146",
+            "1585939435.9856498",
+            "1585930892.8467379",
+            "1585936404.000936",
+            "1585928292.161804",
+            "1585930890.959148",
+            "1585933418.320897",
+            "1585930956.739653",
+            "1585928292.110432"]
+
+    eigenvalue_dict = {}
+    acc_dict = {}
+    loss = torch.nn.CrossEntropyLoss()
+    with open(os.path.join(experiment_folder, "data.pkl"), "rb") as f:
+        data = pickle.load(f)
+
+    train_loader = DataLoader(data[0], batch_size=len(data[0]))  # fix the batch size
+    test_loader = DataLoader(data[1], batch_size=len(data[1]))
+
+    for curr_dir in errs:
+        root = os.path.join("{}/resampling".format(experiment_folder), curr_dir)
+        print(curr_dir)
+        models_dict, sampled_idx = get_models(root, -1)
+        while True:
+            try:
+                eigenvalue_dict[curr_dir], acc_dict[curr_dir] = _get_eig(models_dict, train_loader, test_loader, loss)
+                break
+            except:
+                print("Retry")
+                continue
+
+    with open(os.path.join(experiment_folder, "eig_tmp_errs.pkl"), "wb") as f:
+        pickle.dump(eigenvalue_dict, f)
+    with open(os.path.join(experiment_folder, "acc_tmp_errs.pkl"), "wb") as f:
+        pickle.dump(acc_dict, f)
+
 if __name__ == "__main__":
-    # get test--accuracy and total weight.
-    experiment_name = "Mar22_17-16-50_Daniels-MacBook-Pro-4.local"
-    experiment_folder = "./gaussian_experiments/{}".format(experiment_name)
+    main("")
+    # import argparse
+    #
+    # parser = argparse.ArgumentParser(description='Postprocess experiment.')
+    # parser.add_argument('exp_name', metavar='exp_name', type=str,
+    #                     help='name of experiment')
+    #
+    # args = parser.parse_args()
+    #
+    # print(args)
+    #
+    # experiment_name = args.exp_name
 
 

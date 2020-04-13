@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import copy, yaml
+import copy, yaml, pickle
 import torch
 import torchvision
 import torch.optim as optim
@@ -28,7 +28,6 @@ def train(data, config, folder_path):
     train_loader = DataLoader(data[0], batch_size=config["batch_train_size"], shuffle=True)
     test_loader = DataLoader(data[1], batch_size=config["batch_test_size"], shuffle=True)
 
-
     # Init neural nets and weights
     num_nets = config["num_nets"]
     net_params = config["net_params"]
@@ -45,21 +44,38 @@ def train(data, config, folder_path):
 
     beta = config["softmax_beta"]
 
+
+
     # init saving
-    file_stamp = time.time() #get_file_stamp()
+    file_stamp = str(time.time()) #get_file_stamp()
     writer = SummaryWriter("{}/runs/{}".format(folder_path, file_stamp))
-    os.makedirs("{}/models/{}".format(folder_path, file_stamp))
     with open("{}/runs/{}/{}".format(folder_path, file_stamp, "config.yml"), "w") as f:
         yaml.dump(config, f, default_flow_style=False)
 
+    # save init nets
+    os.makedirs(os.path.join(folder_path, "resampling", file_stamp, "step_{}".format(0), "models"))
+
+    for idx_net in range(num_nets):
+        torch.save(nets[idx_net],
+                   os.path.join(folder_path, "resampling", file_stamp, "step_{}".format(0), "models",
+                                "net_{}.pkl".format(idx_net)))
+    sampled_idx = np.array(list(range(0, num_nets)))
+    with open(os.path.join(folder_path, "resampling", file_stamp, "step_{}".format(0), "sampled_idx.pkl"),
+              "wb") as f:
+        pickle.dump(sampled_idx, f)
+
+    # init number of steps taken to first step
+    curr_step = 1
+
     # train
-    for epoch in range(config["num_epochs"]):
+    while curr_step < config["num_steps"]:
+
         # get train loaders for each net
         net_data_loaders = [iter(enumerate(train_loader, 0)) for _ in range(num_nets)]
 
-        is_training_epoch = True
-        while is_training_epoch:
-            # TODO make inner loop a function. That way we can have different methods of looping over data.
+        is_training_curr = True
+        while is_training_curr and (curr_step < config["num_steps"]):
+            # do update step for each net
             for idx_net in range(num_nets):
                 # get net and optimizer
                 net = nets[idx_net]
@@ -69,7 +85,7 @@ def train(data, config, folder_path):
                 try:
                     i, data = next(net_data_loaders[idx_net])
                 except:
-                    is_training_epoch = False
+                    is_training_curr = False
                     break
                 inputs, labels = data
 
@@ -105,50 +121,60 @@ def train(data, config, folder_path):
                 else:
                     raise NotImplementedError()
 
-                # store training accuracy current
-                writer.add_scalar('Loss/train/net_{}'.format(idx_net), loss, i + epoch*len(train_loader))
+                # store metrics for each net
+                writer.add_scalar('Loss/train/net_{}'.format(idx_net), loss, curr_step)
+                writer.add_scalar('Potential/curr/net_{}'.format(idx_net), curr_weight, curr_step)
+                writer.add_scalar('Potential/total/net_{}'.format(idx_net), nets_weights[idx_net], curr_step)
 
-                writer.add_scalar('Potential/curr/net_{}'.format(idx_net), curr_weight, i + epoch*len(train_loader))
-                writer.add_scalar('Potential/total/net_{}'.format(idx_net), nets_weights[idx_net], i + epoch*len(train_loader))
-
-
-            writer.add_scalar('Kish/', kish_effs(nets_weights), i + epoch*len(train_loader))
-
+            # store global metrics
+            writer.add_scalar('Kish/', kish_effs(nets_weights), curr_step)
             # Get variation of network weights
-            writer.add_scalar('WeightVarTrace/', np.trace(get_params_var(nets)), i + epoch*len(train_loader))
-
+            covs = get_params_cov(nets)
+            writer.add_scalar('WeightVarTrace/', np.trace(covs.T.dot(covs)), curr_step)
 
             # Check resample
             if kish_effs(nets_weights) < config["ess_threshold"]:
+                # save nets
+                os.makedirs(os.path.join(folder_path, "resampling", file_stamp, "step_{}".format(curr_step), "models"))
+
+                for idx_net in range(num_nets):
+                    torch.save(nets[idx_net], os.path.join(folder_path, "resampling", file_stamp, "step_{}".format(curr_step), "models", "net_{}.pkl".format(idx_net)))
+
                 # resample particles
-                sampled_idx = sample_index_softmax(nets_weights, nets, beta=beta)
-                # init nets etc
+                if beta != 0:
+                    sampled_idx = sample_index_softmax(nets_weights, nets, beta=beta)
+                else:
+                    sampled_idx = list(range(num_nets))
                 nets = [copy.deepcopy(nets[i]) for i in sampled_idx]
                 optimizers = [optim.SGD(nets[i].parameters(), lr=config["learning_rate"],
                                         momentum=config["momentum"]) for i in range(num_nets)]
                 nets_weights = np.zeros(num_nets)
-                # TODO save which models got swapped how
+
+                # save the resample indecies
+                with open(os.path.join(folder_path, "resampling", file_stamp, "step_{}".format(curr_step), "sampled_idx.pkl"), "wb") as f:
+                    pickle.dump(sampled_idx, f)
+
+                is_training_curr = False
+
+            # update curr_step
+            curr_step += 1
 
         # get test error
         for idx_net in range(num_nets):
-            correct = 0
-            _sum = 0
+            accuracy = get_net_accuracy(nets[idx_net], test_loader)
+            writer.add_scalar('Accuracy/net_{}'.format(idx_net), accuracy, curr_step)
 
-            for idx, (test_x, test_label) in enumerate(test_loader):
-                predict_y = nets[idx_net](test_x.float()).detach()
-                predict_ys = np.argmax(predict_y, axis=-1)
-                label_np = test_label.numpy()
-                _ = predict_ys == test_label
-                correct += np.sum(_.numpy(), axis=-1)
-                _sum += _.shape[0]
+    # save final nets
+    os.makedirs(os.path.join(folder_path, "resampling", file_stamp, "step_{}".format(curr_step), "models"))
 
-                writer.add_scalar('Accuracy/net_{}'.format(idx_net), correct / _sum, epoch*len(train_loader) + i)
-
-        for idx_net in range(num_nets):
-            torch.save(nets[idx_net], '{}/models/{}/net_{}_step_{}.pkl'.format(folder_path, file_stamp, idx_net, epoch*len(train_loader) + i))
-
-
-
+    for idx_net in range(num_nets):
+        torch.save(nets[idx_net],
+                   os.path.join(folder_path, "resampling", file_stamp, "step_{}".format(curr_step), "models",
+                                "net_{}.pkl".format(idx_net)))
+    sampled_idx = np.array(list(range(0, num_nets)))
+    with open(os.path.join(folder_path, "resampling", file_stamp, "step_{}".format(curr_step), "sampled_idx.pkl"),
+              "wb") as f:
+        pickle.dump(sampled_idx, f)
     return nets
 
 

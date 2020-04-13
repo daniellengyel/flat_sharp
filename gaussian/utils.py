@@ -59,14 +59,14 @@ def get_grad_params_vec(net):
     param_vec = [list_params[i].grad.view(list_params[i].nelement()).detach().numpy() for i in range(len(list_params))]
     return np.concatenate(param_vec, 0)
 
-def get_params_var(nets):
+def get_params_cov(nets):
+    """The variance of the weights of the neural networks.
+    Output is nets.shape[1]xnets.shape[1]."""
     nets_param_vecs = []
     for net_idx in range(len(nets)):
         param_vec = get_params_vec(nets[net_idx])
         nets_param_vecs.append(param_vec)
-    if len(nets) == 1:
-        return np.cov(np.array(nets_param_vecs)).reshape(1,1)
-    return np.cov(np.array(nets_param_vecs))
+    return np.cov(np.array(nets_param_vecs).T)
 
 
 # Viz 
@@ -158,5 +158,16 @@ def get_gaussian_data(means, covs, train_nums, test_nums):
     test_gaussian = GaussianMixture(means, covs, len(means) * [test_nums])
 
     return train_gaussian, test_gaussian
-    
 
+def get_net_accuracy(net, test_loader):
+    correct = 0
+    _sum = 0
+
+    for idx, (test_x, test_label) in enumerate(test_loader):
+        predict_y = net(test_x.float()).detach()
+        predict_ys = np.argmax(predict_y, axis=-1)
+        label_np = test_label.numpy()
+        _ = predict_ys == test_label
+        correct += np.sum(_.numpy(), axis=-1)
+        _sum += _.shape[0]
+    return correct / float(_sum)
