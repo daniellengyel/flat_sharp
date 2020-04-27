@@ -2,35 +2,79 @@ import numpy as np
 import torch
 from torch.utils.data import Dataset, DataLoader
 import torchvision
+import torchvision.transforms as transforms
+
 import os
 
 PATH_TO_DATA = "/Users/daniellengyel/flat_sharp/flat_sharp/data"
 
-def get_data(data_name):
+def get_data(data_name, vectorized=False):
     if data_name == "gaussian":
-        return _get_gaussian()
+        train_data, test_data = _get_gaussian()
     elif data_name == "MNIST":
-        return _get_MNIST()
+        train_data, test_data = _get_MNIST()
+    elif data_name == "CIFAR10":
+        train_data, test_data = _get_CIFAR10()
+    elif data_name == "FashionMNIST":
+        train_data, test_data = _get_FashionMNIST()
     else:
         raise NotImplementedError("{} is not implemented.".format(data_name))
+    if vectorized:
+        return VectorizedWrapper(train_data), VectorizedWrapper(test_data)
+    return train_data, test_data
 
 def _get_MNIST():
     train_data = torchvision.datasets.MNIST(os.path.join(PATH_TO_DATA, "MNIST"), train=True,
-                                            download=False,
+                                            download=True,
                                             transform=torchvision.transforms.Compose([
                                                 torchvision.transforms.ToTensor(),
                                                 torchvision.transforms.Normalize(
                                                     (0.1307,), (0.3081,))
                                             ]))
     test_data = torchvision.datasets.MNIST(os.path.join(PATH_TO_DATA, "MNIST"), train=False,
-                                           download=False,
+                                           download=True,
                                            transform=torchvision.transforms.Compose([
                                                torchvision.transforms.ToTensor(),
                                                torchvision.transforms.Normalize(
                                                    (0.1307,), (0.3081,))
                                            ]))
 
-    train_data, test_data = MNISTWrapper(train_data), MNISTWrapper(test_data)
+    return train_data, test_data
+
+
+def _get_FashionMNIST():
+    train_data = torchvision.datasets.FashionMNIST(
+        root=os.path.join(PATH_TO_DATA, "FashionMNIST"),
+        train=True,
+        download=True,
+        transform=transforms.Compose([
+            transforms.ToTensor()
+        ])
+    )
+
+    test_data = torchvision.datasets.FashionMNIST(
+        root=os.path.join(PATH_TO_DATA, "FashionMNIST"),
+        train=False,
+        download=True,
+        transform=transforms.Compose([
+            transforms.ToTensor()
+        ])
+    )
+    return train_data, test_data
+
+def _get_CIFAR10():
+    transform = transforms.Compose(
+        [transforms.ToTensor(),
+         transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
+
+    train_data = torchvision.datasets.CIFAR10(root=os.path.join(PATH_TO_DATA, "CIFAR10"), train=True,
+                                            download=True, transform=transform)
+
+    test_data = torchvision.datasets.CIFAR10(root=os.path.join(PATH_TO_DATA, "CIFAR10"), train=False,
+                                           download=True, transform=transform)
+
+    classes = ('plane', 'car', 'bird', 'cat',
+               'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
 
     return train_data, test_data
 
@@ -53,19 +97,6 @@ def _get_gaussian():
     test_gaussian = GaussianMixture(means, covs, len(means) * [test_nums])
 
     return train_gaussian, test_gaussian
-
-#  specific for current data
-class MNISTWrapper():
-    def __init__(self, MNIST_Dataset):
-        self.MNIST = MNIST_Dataset
-
-    def __getitem__(self, item):
-        data, target = self.MNIST.__getitem__(item)
-        return data.view(-1), target
-
-    def __len__(self):
-        return len(self.MNIST)
-
 
 class GaussianMixture(Dataset):
     """Dataset gaussian mixture. Points of first gaussian are mapped to 0 while points in the second are mapped 1.
@@ -110,3 +141,14 @@ class GaussianMixture(Dataset):
     def __len__(self):
         return len(self.data)
 
+#  vectorizes data
+class VectorizedWrapper():
+    def __init__(self, data):
+        self.data = data
+
+    def __getitem__(self, item):
+        data, target = self.data.__getitem__(item)
+        return data.view(-1), target
+
+    def __len__(self):
+        return len(self.data)

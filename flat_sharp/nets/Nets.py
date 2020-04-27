@@ -10,19 +10,19 @@ from torch.nn import Module
 
 
 class LeNet(Module):
-    def __init__(self):
+    def __init__(self, height, width, channels, out_dim):
         super(LeNet, self).__init__()
-        self.conv1 = nn.Conv2d(1, 6, 5)
+        self.conv1 = nn.Conv2d(channels, 6, 5)
         self.relu1 = nn.ReLU()
         self.pool1 = nn.MaxPool2d(2)
         self.conv2 = nn.Conv2d(6, 16, 5)
         self.relu2 = nn.ReLU()
         self.pool2 = nn.MaxPool2d(2)
-        self.fc1 = nn.Linear(256, 120)
+        self.fc1 = nn.Linear(int(16 * (height - 12)/4 * (width - 12)/4), 120) # Each conv subtracts by 4 and MaxPool divides size by 2.
         self.relu3 = nn.ReLU()
         self.fc2 = nn.Linear(120, 84)
         self.relu4 = nn.ReLU()
-        self.fc3 = nn.Linear(84, 10)
+        self.fc3 = nn.Linear(84, out_dim)
         self.relu5 = nn.ReLU()
 
     def forward(self, x):

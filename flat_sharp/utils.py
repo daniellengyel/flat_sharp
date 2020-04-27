@@ -1,12 +1,18 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import torch
+from torch.utils.data import DataLoader
+import torch.optim as optim
+
+
 
 import datetime
 import socket, sys, os
 
 from collections import defaultdict
 from tensorflow.python.summary.summary_iterator import summary_iterator
+
+from nets.Nets import *
 
 def get_file_stamp():
     """Return time and hostname as string for saving files related to the current experiment"""
@@ -63,13 +69,21 @@ def get_grad_params_vec(net):
 def torch_cov(m):
     m_exp = torch.mean(m, dim=1)
     x = m - m_exp[:, None]
-    cov = 1 / (x.size(1) - 1) * x.mm(x.t())
+    if x.size(1) > 1:
+        C = (1 / (x.size(1) - 1))
+    else:
+        C = 1
+    cov = C * x.mm(x.t())
     return cov
 
 def torch_cov_trace(m):
     m_exp = torch.mean(m, dim=1)
     x = m - m_exp[:, None]
-    return 1 / (x.size(1) - 1) * torch.stack([torch.norm(x[:, i]) for i in range(m.size(1))]).sum()
+    if x.size(1) > 1:
+        C = (1 / (x.size(1) - 1))
+    else:
+        C = 1
+    return C * torch.stack([torch.norm(x[:, i]) for i in range(m.size(1))]).sum()
 
 def get_params_cov(nets):
     """The variance of the weights of the neural networks.
@@ -77,6 +91,10 @@ def get_params_cov(nets):
     nets_param_vecs = torch.stack([get_params_vec(nets[net_idx]) for net_idx in range(len(nets))])
     cov = torch_cov_trace(nets_param_vecs.T)
     return cov
+
+def get_correlation(X, Y):
+    return (X - np.mean(X)).dot(Y - np.mean(Y)) / np.sqrt(np.var(X)*np.var(Y)) * 1/float(len(Y))
+
 
 # Viz 
 
@@ -176,4 +194,48 @@ def get_net_accuracy(net, test_loader, full_dataset=False):
         if not full_dataset:
             break
     return correct / float(_sum)
+
+# exploring loss landscape
+def unbiased_weight_estimate(net, data, criterion, num_samples=3, batch_size=500, max_steps=3):
+    weights = []
+    optimizer = optim.SGD(net.parameters(), lr=0,
+                          momentum=0)
+    iter_data = iter(DataLoader(data, batch_size=batch_size, shuffle=True))  # fix the batch size
+
+    should_continue = True
+    steps = 0
+    while should_continue and (steps < max_steps):
+        tmp_w_2 = 0
+        curr_grad = None
+        for _ in range(num_samples):
+            try:
+                inputs, labels = next(iter_data)
+            except:
+                should_continue = False
+                break
+
+            optimizer.zero_grad()
+
+            # Compute gradients for input.
+            inputs.requires_grad = True
+
+            # forward + backward + optimize
+            outputs = net(inputs)
+            loss = criterion(outputs.float(), labels)
+            loss.backward(retain_graph=True)
+
+            param_grads = get_grad_params_vec(net)
+            if curr_grad is None:
+                curr_grad = param_grads
+            else:
+                curr_grad += param_grads
+            tmp_w_2 += torch.norm(param_grads) ** 2
+
+        if should_continue:
+            weights.append((torch.norm(curr_grad) ** 2 - tmp_w_2) / (num_samples * (num_samples - 1)))
+            steps += 1
+    return np.mean(weights)
+
+
+
 
