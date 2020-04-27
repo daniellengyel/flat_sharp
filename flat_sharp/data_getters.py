@@ -6,7 +6,8 @@ import torchvision.transforms as transforms
 
 import os
 
-PATH_TO_DATA = "/Users/daniellengyel/flat_sharp/flat_sharp/data"
+
+PATH_TO_DATA = "{}/data".format(os.environ["PATH_TO_FLAT_FOLDER"])
 
 def get_data(data_name, vectorized=False):
     if data_name == "gaussian":

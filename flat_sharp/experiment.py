@@ -69,8 +69,8 @@ config["weight_type"] = "loss_gradient_weights"  # "input_output_forbenius", #
 
 # --- Set up folder in which to store all results ---
 folder_name = get_file_stamp()
-folder_path = os.path.join(os.getcwd(), "experiments", data_name, folder_name)
-print(os.getcwd())
+cwd = os.environ["PATH_TO_FLAT_FOLDER"]
+folder_path = os.path.join(cwd, "experiments", data_name, folder_name)
 print(folder_path)
 os.makedirs(folder_path)
 
