@@ -14,7 +14,7 @@ import re
 from postprocessing import *
 
 
-def get_end_stats(stuff, key_names=["id"], filter_dict={}):
+def get_end_stats(stuff):
     stats_dict = {}
 
     runs = stuff["runs"]
@@ -27,37 +27,8 @@ def get_end_stats(stuff, key_names=["id"], filter_dict={}):
         num_nets = configs[exp_id]["num_nets"]
         num_steps = max(runs[exp_id], key=lambda x: int(x))
 
-        filter_this_exp = False
-        for k in filter_dict:
-            try:
-                tmp_key = stuff["configs"][exp_id][k]
-            except:
-                print("Error: Couldn't find {} in configs".format(k))
-            if stuff["configs"][exp_id][k] != filter_dict[k]:
-                filter_this_exp = True
 
-        if filter_this_exp:
-            continue
-
-        dict_key = []
-        for key_name in key_names:
-            if key_name == "id":
-                tmp_key = exp_id
-            elif key_name == "net_params":
-                tmp_key = tuple(stuff["configs"][exp_id][key_name])
-            else:
-                try:
-                    tmp_key = stuff["configs"][exp_id][key_name]
-                except:
-                    print("Error: Couldn't find {} in configs".format(key_name))
-            dict_key.append(tmp_key)
-
-        if dict_key == []:
-            dict_key =  [str(exp_id)]
-
-        dict_key = tuple(dict_key)
-
-        stats_dict[dict_key] = {}
+        stats_dict[str(exp_id)] = {}
 
         Loss_train_list = [runs[exp_id][num_steps - 1]["Loss"]["train"]["net"][str(nn)] for nn in range(num_nets)]
         Acc_test_list = [runs[exp_id][num_steps]["Accuracy"]["net"][str(nn)] for nn in range(num_nets)]
@@ -65,7 +36,7 @@ def get_end_stats(stuff, key_names=["id"], filter_dict={}):
         stats_dict[dict_key]["Mean Train Loss"] = np.mean(Loss_train_list)
         stats_dict[dict_key]["Mean Test Acc"] = np.mean(Acc_test_list)
 
-        if trace is not None:
+        try:
             Trace_list = [np.mean(trace[exp_id][str(nn)]) for nn in range(num_nets)]
             Trace_std_list = [np.std(trace[exp_id][str(nn)]) for nn in range(num_nets)]
             stats_dict[dict_key]["Mean Trace"] = np.mean(Trace_list)
@@ -77,6 +48,8 @@ def get_end_stats(stuff, key_names=["id"], filter_dict={}):
 
             stats_dict[dict_key]["Train Loss/Trace Correlation"] = get_correlation(Loss_train_list, Trace_list)
             stats_dict[dict_key]["Test Acc/Trace Correlation"] = get_correlation(Acc_test_list, Trace_list)
+        except:
+            print("Error: No trace for {}".format(exp_id))
 
     #         print("Mean Loss: {:.4f}".format(np.mean(Loss_list)))
     #         print("Mean Trace: {:.4f}".format(np.mean(Trace_list)))
@@ -87,7 +60,13 @@ def get_end_stats(stuff, key_names=["id"], filter_dict={}):
 
     #         print("")
 
-    return pd.DataFrame(stats_dict).T
+    stats_pd = pd.DataFrame(stats_dict).T
+
+    cfs_hp = get_hp(configs)
+    cfs_hp_df = configs[list(cfs_hp.keys())]
+    stats_pd = pd.concat([stats_pd, cfs_hp_df], axis=1)
+
+    return stats_pd
 
 
 def what_it_do():

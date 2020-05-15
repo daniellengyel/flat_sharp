@@ -55,14 +55,14 @@ config["batch_train_size"] = tune.grid_search([128])
 config["batch_test_size"] = tune.grid_search([100])
 
 config["ess_threshold"] =  None # tune.grid_search([0.97])
-config["sampling_tau"] = 100 # tune.grid_search([100, 500])
+config["sampling_tau"] = 25 # tune.grid_search([100, 500])
 
-config["learning_rate"] = tune.grid_search(list(np.linspace(1e-2, 1, 20)))
+config["learning_rate"] = 0.166316 # tune.grid_search(list(np.linspace(1e-2, 1, 20)))
 config["momentum"] = 0
 
-config["num_nets"] = 3  # would like to make it like other one, where we can define region to initialize
+config["num_nets"] = 10  # would like to make it like other one, where we can define region to initialize
 
-config["softmax_beta"] = tune.grid_search([-50, 0, 50]) # e.g. negtive to prioritize low weights
+config["softmax_beta"] = tune.grid_search(list(np.linspace(-10, 10, 10))) # e.g. negtive to prioritize low weights
 
 config["weight_type"] = "loss_gradient_weights"  # "input_output_forbenius", #
 

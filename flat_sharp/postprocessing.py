@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 
 import torch
@@ -40,7 +41,6 @@ def tb_to_dict(path_to_events_file, names):
                         tmp_dict = tmp_dict[s]
                 tmp_dict[t_split[-1]] = v.simple_value
     return tb_dict
-
 
 def get_models(model_folder_path, step):
     if step == -1:
@@ -130,7 +130,7 @@ def get_configs(experiment_folder):
             config = yaml.load(f)
         config_dir[curr_dir] = config
 
-    return config_dir
+    return pd.DataFrame(config_dir).T
 
 def get_postprocessing_data(experiment_folder, vectorized=True):
     data_type = experiment_folder.split("/")[-2]
@@ -397,6 +397,17 @@ def _get_dirichlet_energy(nets, data, num_steps, step_size, var_noise, alpha=1, 
         # cache data
     return nets_weights
 
+def different_cols(df):
+    a = df.to_numpy() # df.values (pandas<0.24)
+    a[:, 14] = 0
+    return (a[0] != a[1:]).any(0)
+
+def get_hp(cfs):
+    filter_cols = different_cols(cfs)
+    hp_names = cfs.columns[filter_cols]
+    hp_dict = {hp: cfs[hp].unique() for hp in hp_names}
+    return hp_dict
+
 def get_dirichlet_energy(experiment_folder, model_step, num_steps=20, step_size=0.001, var_noise=0.5, alpha=1, seed=1, FCN=False):
     # init
     energy_dict = {}
@@ -441,7 +452,7 @@ def main(experiment_name):
     # run_data = get_runs(experiment_folder, names)
 
     root_experiment_folder = "/Users/daniellengyel/flat_sharp/flat_sharp/experiments/FashionMNIST/{}"
-    exp =  "Apr27_00-03-27_Daniels-MacBook-Pro-4.local"
+    exp =  "May14_23-57-49_Daniels-MacBook-Pro-4.local"
     experiment_folder = root_experiment_folder.format(exp)
 
     get_runs(experiment_folder , ["Loss", "Kish", "Potential", "Accuracy", "WeightVarTrace"]) # TODO does not find acc and var

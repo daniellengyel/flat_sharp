@@ -2,8 +2,20 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="dbad1cab-b067-4bc1-8834-44ef752ab477" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/flat_sharp/data_getters.py" beforeDir="false" afterPath="$PROJECT_DIR$/flat_sharp/data_getters.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/flat_sharp/experiment.py" beforeDir="false" afterPath="$PROJECT_DIR$/flat_sharp/experiment.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/flat_sharp/.ipynb_checkpoints/Analysis-checkpoint.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/flat_sharp/.ipynb_checkpoints/Analysis-checkpoint.ipynb" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/flat_sharp/Analysis.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/flat_sharp/Analysis.ipynb" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/flat_sharp/analysis.py" beforeDir="false" afterPath="$PROJECT_DIR$/flat_sharp/analysis.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/flat_sharp/postprocessing.py" beforeDir="false" afterPath="$PROJECT_DIR$/flat_sharp/postprocessing.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/gaussian/.gitignore" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/gaussian/dataloaders.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/gaussian/gaussian_experiment.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/gaussian/gaussian_postprocessing.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/gaussian/gaussian_training.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/gaussian/nets/LeNet.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/gaussian/nets/Nets.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/gaussian/req.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/gaussian/utils.py" beforeDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -15,15 +27,16 @@
     <session id="-977660833">
       <usages-collector id="statistics.lifecycle.project">
         <counts>
-          <entry key="project.closed" value="2" />
+          <entry key="project.closed" value="5" />
           <entry key="project.open.time.0" value="1" />
           <entry key="project.open.time.14" value="1" />
           <entry key="project.open.time.18" value="1" />
+          <entry key="project.open.time.3" value="1" />
           <entry key="project.open.time.4" value="1" />
           <entry key="project.open.time.5" value="2" />
-          <entry key="project.open.time.7" value="1" />
+          <entry key="project.open.time.7" value="2" />
           <entry key="project.open.time.8" value="1" />
-          <entry key="project.opened" value="8" />
+          <entry key="project.opened" value="10" />
         </counts>
       </usages-collector>
       <usages-collector id="statistics.file.extensions.open">
@@ -38,23 +51,23 @@
       </usages-collector>
       <usages-collector id="statistics.file.extensions.edit">
         <counts>
-          <entry key="py" value="15076" />
+          <entry key="py" value="15142" />
         </counts>
       </usages-collector>
       <usages-collector id="statistics.file.types.edit">
         <counts>
-          <entry key="Python" value="15076" />
+          <entry key="Python" value="15142" />
         </counts>
       </usages-collector>
     </session>
   </component>
   <component name="FileEditorManager">
     <leaf SIDE_TABS_SIZE_LIMIT_KEY="300">
-      <file pinned="false" current-in-tab="true">
+      <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/flat_sharp/experiment.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="337">
-              <caret line="73" column="18" lean-forward="true" selection-start-line="73" selection-start-column="18" selection-end-line="73" selection-end-column="18" />
+            <state relative-caret-position="1098">
+              <caret line="73" column="17" selection-start-line="73" selection-start-column="6" selection-end-line="73" selection-end-column="17" />
               <folding>
                 <element signature="e#0#18#0" expanded="true" />
               </folding>
@@ -65,11 +78,11 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/flat_sharp/training.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="365">
-              <caret line="76" column="14" selection-start-line="76" selection-start-column="11" selection-end-line="76" selection-end-column="14" />
+            <state relative-caret-position="108">
+              <caret line="20" selection-start-line="20" selection-end-line="20" />
               <folding>
                 <element signature="e#0#18#0" expanded="true" />
-                <marker date="1588003759015" expanded="true" signature="7351:7352" ph="..." />
+                <marker date="1588032294718" expanded="true" signature="7351:7352" ph="..." />
               </folding>
             </state>
           </provider>
@@ -78,7 +91,7 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/flat_sharp/utils.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="250">
+            <state relative-caret-position="3564">
               <caret line="212" column="15" selection-start-line="212" selection-start-column="15" selection-end-line="212" selection-end-column="15" />
               <folding>
                 <element signature="e#0#18#0" expanded="true" />
@@ -90,27 +103,27 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/flat_sharp/postprocessing.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="2366">
-              <caret line="403" column="14" selection-start-line="403" selection-start-column="14" selection-end-line="403" selection-end-column="14" />
+            <state relative-caret-position="7578">
+              <caret line="443" column="55" selection-start-line="443" selection-start-column="55" selection-end-line="443" selection-end-column="55" />
               <folding>
                 <element signature="e#0#18#0" expanded="true" />
-                <marker date="1587996994245" expanded="true" signature="2070:2436" ph="..." />
-                <marker date="1587996994245" expanded="true" signature="2476:3388" ph="..." />
-                <marker date="1587996994245" expanded="true" signature="4440:6051" ph="..." />
-                <marker date="1587996994245" expanded="true" signature="6049:6051" ph="..." />
-                <marker date="1587996994245" expanded="true" signature="7706:7707" ph="..." />
-                <marker date="1587996994245" expanded="true" signature="10425:10428" ph="..." />
-                <marker date="1587996994245" expanded="true" signature="15469:15471" ph="..." />
+                <marker date="1588072151153" expanded="true" signature="2070:2436" ph="..." />
+                <marker date="1588072151153" expanded="true" signature="2476:3388" ph="..." />
+                <marker date="1588072151153" expanded="true" signature="4440:6051" ph="..." />
+                <marker date="1588072151153" expanded="true" signature="6049:6051" ph="..." />
+                <marker date="1588072151153" expanded="true" signature="7706:7707" ph="..." />
+                <marker date="1588072151153" expanded="true" signature="10425:10428" ph="..." />
+                <marker date="1588072151153" expanded="true" signature="15469:15471" ph="..." />
               </folding>
             </state>
           </provider>
         </entry>
       </file>
-      <file pinned="false" current-in-tab="false">
+      <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/flat_sharp/analysis.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="95">
-              <caret line="16" column="57" selection-start-line="16" selection-start-column="57" selection-end-line="16" selection-end-column="57" />
+            <state relative-caret-position="1440">
+              <caret line="80" column="56" selection-start-line="80" selection-start-column="56" selection-end-line="80" selection-end-column="56" />
               <folding>
                 <element signature="e#0#18#0" expanded="true" />
               </folding>
@@ -129,20 +142,16 @@
       </file>
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/flat_sharp/dataloaders.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="-120" />
-          </provider>
+          <provider selected="true" editor-type-id="text-editor" />
         </entry>
       </file>
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/flat_sharp/data_getters.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="152">
-              <caret line="9" column="65" selection-start-line="9" selection-start-column="32" selection-end-line="9" selection-end-column="65" />
+            <state relative-caret-position="54">
+              <caret line="9" column="56" selection-start-line="9" selection-start-column="56" selection-end-line="9" selection-end-column="56" />
               <folding>
                 <element signature="e#0#18#0" expanded="true" />
-                <marker date="1588029824896" expanded="true" signature="268:810" ph="..." />
-                <marker date="1588029824896" expanded="true" signature="3117:3119" ph="..." />
               </folding>
             </state>
           </provider>
@@ -165,10 +174,10 @@
       <find>num_steps</find>
       <find>step</find>
       <find>get</find>
-      <find>configs</find>
       <find>print</find>
       <find>dir</find>
       <find>cwd</find>
+      <find>configs</find>
     </findStrings>
     <replaceStrings>
       <replace>curr_step</replace>
@@ -194,11 +203,11 @@
         <option value="$PROJECT_DIR$/flat_sharp/nets/Nets.py" />
         <option value="$PROJECT_DIR$/flat_sharp/testing.py" />
         <option value="$PROJECT_DIR$/flat_sharp/utils.py" />
-        <option value="$PROJECT_DIR$/flat_sharp/postprocessing.py" />
-        <option value="$PROJECT_DIR$/flat_sharp/analysis.py" />
-        <option value="$PROJECT_DIR$/flat_sharp/training.py" />
         <option value="$PROJECT_DIR$/flat_sharp/data_getters.py" />
         <option value="$PROJECT_DIR$/flat_sharp/experiment.py" />
+        <option value="$PROJECT_DIR$/flat_sharp/training.py" />
+        <option value="$PROJECT_DIR$/flat_sharp/postprocessing.py" />
+        <option value="$PROJECT_DIR$/flat_sharp/analysis.py" />
       </list>
     </option>
   </component>
@@ -208,7 +217,7 @@
     <detection-done>true</detection-done>
     <sorting>DEFINITION_ORDER</sorting>
   </component>
-  <component name="ProjectFrameBounds" fullScreen="true">
+  <component name="ProjectFrameBounds" extendedState="6" fullScreen="true">
     <option name="width" value="1440" />
     <option name="height" value="900" />
   </component>
@@ -217,35 +226,7 @@
     <navigator proportions="" version="1">
       <foldersAlwaysOnTop value="true" />
     </navigator>
-    <panes>
-      <pane id="Scope" />
-      <pane id="ProjectPane">
-        <subPane>
-          <expand>
-            <path>
-              <item name="flat_sharp" type="b2602c69:ProjectViewProjectNode" />
-              <item name="flat_sharp" type="462c0819:PsiDirectoryNode" />
-            </path>
-            <path>
-              <item name="flat_sharp" type="b2602c69:ProjectViewProjectNode" />
-              <item name="flat_sharp" type="462c0819:PsiDirectoryNode" />
-              <item name="flat_sharp" type="462c0819:PsiDirectoryNode" />
-            </path>
-            <path>
-              <item name="flat_sharp" type="b2602c69:ProjectViewProjectNode" />
-              <item name="flat_sharp" type="462c0819:PsiDirectoryNode" />
-              <item name="gaussian" type="462c0819:PsiDirectoryNode" />
-            </path>
-            <path>
-              <item name="flat_sharp" type="b2602c69:ProjectViewProjectNode" />
-              <item name="flat_sharp" type="462c0819:PsiDirectoryNode" />
-              <item name="MNIST" type="462c0819:PsiDirectoryNode" />
-            </path>
-          </expand>
-          <select />
-        </subPane>
-      </pane>
-    </panes>
+    <panes />
   </component>
   <component name="PropertiesComponent">
     <property name="WebServerToolWindowFactoryState" value="false" />
@@ -286,7 +267,6 @@
   </component>
   <component name="ToolWindowManager">
     <frame x="0" y="0" width="1440" height="900" extended-state="6" />
-    <editor active="true" />
     <layout>
       <window_info content_ui="combo" id="Project" order="0" weight="0.21888413" />
       <window_info id="Structure" order="1" side_tool="true" weight="0.25" />
@@ -372,13 +352,7 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/MNIST/dataloaders.py" />
     <entry file="file:///usr/local/lib/python3.7/site-packages/torchvision/__init__.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state>
-          <folding>
-            <element signature="e#0#15#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
+      <provider selected="true" editor-type-id="text-editor" />
     </entry>
     <entry file="file:///usr/local/lib/python3.7/site-packages/torchvision/datasets/mnist.py">
       <provider selected="true" editor-type-id="text-editor">
@@ -412,9 +386,6 @@
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="2592">
           <caret line="154" selection-start-line="154" selection-end-line="159" selection-end-column="40" />
-          <folding>
-            <element signature="e#0#18#0" expanded="true" />
-          </folding>
         </state>
       </provider>
     </entry>
@@ -429,10 +400,6 @@
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="584">
           <caret line="129" column="76" selection-start-line="129" selection-start-column="43" selection-end-line="129" selection-end-column="76" />
-          <folding>
-            <element signature="e#0#18#0" expanded="true" />
-            <marker date="1586733987788" expanded="true" signature="10112:11066" ph="..." />
-          </folding>
         </state>
       </provider>
     </entry>
@@ -458,10 +425,6 @@
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="83">
           <caret line="14" selection-start-line="14" selection-end-line="24" selection-end-column="91" />
-          <folding>
-            <element signature="e#0#18#0" expanded="true" />
-            <marker date="1586736536834" expanded="true" signature="238:241" ph="..." />
-          </folding>
         </state>
       </provider>
     </entry>
@@ -515,39 +478,10 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/flat_sharp/testing.py">
+    <entry file="file://$PROJECT_DIR$/flat_sharp/experiment.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="648">
-          <caret line="36" column="18" selection-start-line="36" selection-start-column="18" selection-end-line="36" selection-end-column="18" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/flat_sharp/dataloaders.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="-120" />
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/flat_sharp/postprocessing.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="2366">
-          <caret line="403" column="14" selection-start-line="403" selection-start-column="14" selection-end-line="403" selection-end-column="14" />
-          <folding>
-            <element signature="e#0#18#0" expanded="true" />
-            <marker date="1587996994245" expanded="true" signature="2070:2436" ph="..." />
-            <marker date="1587996994245" expanded="true" signature="2476:3388" ph="..." />
-            <marker date="1587996994245" expanded="true" signature="4440:6051" ph="..." />
-            <marker date="1587996994245" expanded="true" signature="6049:6051" ph="..." />
-            <marker date="1587996994245" expanded="true" signature="7706:7707" ph="..." />
-            <marker date="1587996994245" expanded="true" signature="10425:10428" ph="..." />
-            <marker date="1587996994245" expanded="true" signature="15469:15471" ph="..." />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/flat_sharp/analysis.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="95">
-          <caret line="16" column="57" selection-start-line="16" selection-start-column="57" selection-end-line="16" selection-end-column="57" />
+        <state relative-caret-position="1098">
+          <caret line="73" column="17" selection-start-line="73" selection-start-column="6" selection-end-line="73" selection-end-column="17" />
           <folding>
             <element signature="e#0#18#0" expanded="true" />
           </folding>
@@ -556,18 +490,18 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/flat_sharp/training.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="365">
-          <caret line="76" column="14" selection-start-line="76" selection-start-column="11" selection-end-line="76" selection-end-column="14" />
+        <state relative-caret-position="108">
+          <caret line="20" selection-start-line="20" selection-end-line="20" />
           <folding>
             <element signature="e#0#18#0" expanded="true" />
-            <marker date="1588003759015" expanded="true" signature="7351:7352" ph="..." />
+            <marker date="1588032294718" expanded="true" signature="7351:7352" ph="..." />
           </folding>
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/flat_sharp/utils.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="250">
+        <state relative-caret-position="3564">
           <caret line="212" column="15" selection-start-line="212" selection-start-column="15" selection-end-line="212" selection-end-column="15" />
           <folding>
             <element signature="e#0#18#0" expanded="true" />
@@ -575,22 +509,47 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/flat_sharp/data_getters.py">
+    <entry file="file://$PROJECT_DIR$/flat_sharp/postprocessing.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="152">
-          <caret line="9" column="65" selection-start-line="9" selection-start-column="32" selection-end-line="9" selection-end-column="65" />
+        <state relative-caret-position="7578">
+          <caret line="443" column="55" selection-start-line="443" selection-start-column="55" selection-end-line="443" selection-end-column="55" />
           <folding>
             <element signature="e#0#18#0" expanded="true" />
-            <marker date="1588029824896" expanded="true" signature="268:810" ph="..." />
-            <marker date="1588029824896" expanded="true" signature="3117:3119" ph="..." />
+            <marker date="1588072151153" expanded="true" signature="2070:2436" ph="..." />
+            <marker date="1588072151153" expanded="true" signature="2476:3388" ph="..." />
+            <marker date="1588072151153" expanded="true" signature="4440:6051" ph="..." />
+            <marker date="1588072151153" expanded="true" signature="6049:6051" ph="..." />
+            <marker date="1588072151153" expanded="true" signature="7706:7707" ph="..." />
+            <marker date="1588072151153" expanded="true" signature="10425:10428" ph="..." />
+            <marker date="1588072151153" expanded="true" signature="15469:15471" ph="..." />
           </folding>
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/flat_sharp/experiment.py">
+    <entry file="file://$PROJECT_DIR$/flat_sharp/testing.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="337">
-          <caret line="73" column="18" lean-forward="true" selection-start-line="73" selection-start-column="18" selection-end-line="73" selection-end-column="18" />
+        <state relative-caret-position="648">
+          <caret line="36" column="18" selection-start-line="36" selection-start-column="18" selection-end-line="36" selection-end-column="18" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/flat_sharp/dataloaders.py">
+      <provider selected="true" editor-type-id="text-editor" />
+    </entry>
+    <entry file="file://$PROJECT_DIR$/flat_sharp/data_getters.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="54">
+          <caret line="9" column="56" selection-start-line="9" selection-start-column="56" selection-end-line="9" selection-end-column="56" />
+          <folding>
+            <element signature="e#0#18#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/flat_sharp/analysis.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="1440">
+          <caret line="80" column="56" selection-start-line="80" selection-start-column="56" selection-end-line="80" selection-end-column="56" />
           <folding>
             <element signature="e#0#18#0" expanded="true" />
           </folding>
