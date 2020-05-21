@@ -17,9 +17,12 @@ import os, time
 
 def train(config, folder_path, train_data, test_data):
     # init torch
-    # device = torch.device("cuda:0") # Uncomment this to run on GPU
+    if config["device"] == "gpu":
+        torch.backends.cudnn.enabled = False
+        device = torch.device("cuda:0")
+    else:
+        device = torch.device("cpu")
 
-    torch.backends.cudnn.enabled = False
     if config["torch_random_seed"] is not None:
         torch.manual_seed(config["torch_random_seed"])
         np.random.seed(config["torch_random_seed"])
@@ -138,16 +141,13 @@ def train(config, folder_path, train_data, test_data):
                     nets = [copy.deepcopy(nets[i]) for i in sampled_idx]
                     optimizers = get_opt_func(nets, optimizers)
 
-                    # optimizers = [optim.SGD(nets[i].parameters(), lr=config["learning_rate"],
-                    #                         momentum=config["momentum"]) for i in range(num_nets)]
 
                 elif beta != 0:
                     sampled_idx = sample_index_softmax(nets_weights, nets, beta=beta)
                     nets = [copy.deepcopy(nets[i]) for i in sampled_idx]
                     optimizers = get_opt_func(nets, optimizers)
 
-                    # optimizers = [optim.SGD(nets[i].parameters(), lr=config["learning_rate"],
-                    #                         momentum=config["momentum"]) for i in range(num_nets)]
+
                 else:
                     sampled_idx = list(range(num_nets))
 

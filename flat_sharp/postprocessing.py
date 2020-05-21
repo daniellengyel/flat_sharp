@@ -455,7 +455,7 @@ def main(experiment_name):
     # run_data = get_runs(experiment_folder, names)
 
     root_experiment_folder = "/Users/daniellengyel/flat_sharp/flat_sharp/experiments/MNIST/{}"
-    exp = "May21_04-00-13_Daniels-MacBook-Pro-4.local"
+    exp = "May21_04-34-11_Daniels-MacBook-Pro-4.local"
     experiment_folder = root_experiment_folder.format(exp)
 
     get_runs(experiment_folder , ["Loss", "Kish", "Potential", "Accuracy", "WeightVarTrace"]) # TODO does not find acc and var
