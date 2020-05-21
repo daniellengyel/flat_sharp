@@ -53,11 +53,11 @@ def experiment_run(config_inp, path):
 #             [13, 20, -8], [30, 15, -2], [40, 0.5, 1]]
 
 # simple
-# g_params = [[-17.5, 1, -2], [17.5, 10, -6.5], [-2, 15, -2],[ -35, 1, 3], [35, 1, 3]]
+g_params = [[-17.5, 1, -2], [17.5, 10, -6.5], [-2, 15, -2],[ -35, 1, 3], [35, 1, 3]]
 
 # complex gaussian
-g_params = [[-54, 0.5, 1], [-44, 15, -2], [-30, 4.5, -3.8], [-24, 4.5, -3.8], [-18, 4.5, -3.8], [0, 4.5, -3.6],  [-6, 4.5, -3.8],  [-12, 4.5, -3.8],
-            [12, 30, -10.1], [35, 15, -2], [45, 0.5, 1]]
+# g_params = [[-54, 0.5, 1], [-44, 15, -2], [-30, 4.5, -3.8], [-24, 4.5, -3.8], [-18, 4.5, -3.8], [0, 4.5, -3.6],  [-6, 4.5, -3.8],  [-12, 4.5, -3.8],
+#             [12, 30, -10.1], [35, 15, -2], [45, 0.5, 1]]
 
 
 
@@ -83,17 +83,18 @@ process["local_entropy_alpha"] = 0 # 0.75
 process["local_entropy_step_size"] = 0.1 # tune.grid_search([0.01, 0.1, 0.5, 1]) # use 1 for exact method
 process["local_entropy_var"] = 0 # tune.grid_search([0.0001, 0.001, 0.01])
 
-process["total_iter"] = 20 # calling this total iter is misleading. It is the total number of times that we resample
-process["tau"] = tune.grid_search([10])
+process["total_iter"] = 500
+process["tau"] = tune.grid_search([1, 5, 25])
 process["x_range"] = [min(np_g_params[:, 0]), max(np_g_params[:, 0])]
 
-process["learning_rate"] = 41.1111	 # tune.grid_search(list(np.linspace(10, 80, 10)))
-process["temperature"] = 0.453333 #  tune.grid_search(list(np.linspace(0.01, 4, 10))) # 0.2
+process["learning_rate"] = tune.grid_search(list(np.linspace(1, 40, 10)) + list(np.linspace(0.01, 1, 5)))
+process["temperature"] =  tune.grid_search(list(np.linspace(0.01, 4, 5))) # 0.2
 process["epsilon"] = 0
 
 process["weight_function"] = "norm"
 process["weight_function_params"] = None
-process["softmax_beta"] = tune.grid_search(list(np.linspace(-4, 4, 20)))
+process["softmax_beta"] = tune.grid_search([-3, -1, -0.5, -0.1, 0, 0.1, 0.5, 1, 3]) # tune.grid_search(list(np.linspace(-60, 60, 61)) + list(np.linspace(-1, 1, 21)))
+process["softmax_beta_function"] = None # [-0.3, 2] # offset, and strength
 
 process["domain_enforcer"] = "hyper_cube_enforcer"
 process["domain_enforcer_params"] = 0.2

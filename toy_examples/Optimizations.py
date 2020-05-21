@@ -9,7 +9,8 @@ import time
 
 def diffusion_resampling(process, path, verbose=False, domain_enforcer=None):
     """Returns the paths of the particles in the format:
-    total_iter, num_particles, tau, dim"""
+    num_resample_steps, num_particles, tau + 1, dim.
+    We get tau+1 because of the resampling step."""
     if process["seed"] is not None:
         np.random.seed(process["seed"])
 
@@ -19,6 +20,12 @@ def diffusion_resampling(process, path, verbose=False, domain_enforcer=None):
     p_num_particles = len(p_start)
     p_epsilon = process["epsilon"]
     total_iter, tau = process["total_iter"], process["tau"]
+    if tau is None:
+        tau = total_iter
+        num_resample_steps = 1
+    else:
+        assert total_iter % tau == 0
+        num_resample_steps = int(total_iter / tau)
     return_full_path = process["return_full_path"]
 
     dim = len(p_start)
@@ -50,9 +57,8 @@ def diffusion_resampling(process, path, verbose=False, domain_enforcer=None):
     curr_paths = np.array([[np.array(p)] for p in p_start])
     all_weights = []
 
-    # Which t to use for diffusion?
-    for t in range(total_iter):
-        for t_tau in range(tau):# Update tau and when to resample. do like with NN
+    for t in range(num_resample_steps):
+        for t_tau in range(tau):
             # --- diffusion step ---
             x_curr = np.array(curr_paths[:, -1])
             x_next = x_curr + p_gamma(t) * (

@@ -73,7 +73,6 @@ def get_all_models(experiment_folder, step):
         if "DS_Store" in curr_dir:
             continue
         root = os.path.join("{}/resampling".format(experiment_folder), curr_dir)
-        print(curr_dir)
         models_dict[curr_dir] = get_models(root, step)
     return models_dict
 
@@ -97,7 +96,6 @@ def get_sample_idxs(experiment_folder):
         if "DS_Store" in curr_dir:
             continue
         root = os.path.join("{}/resampling".format(experiment_folder), curr_dir)
-        print(curr_dir)
         sampled_idxs_dict[curr_dir] = _get_sample_idxs(root)
 
     return sampled_idxs_dict
@@ -129,6 +127,9 @@ def get_configs(experiment_folder):
         with open(os.path.join(root, "config.yml"), "rb") as f:
             config = yaml.load(f)
         config_dir[curr_dir] = config
+        config_dir[curr_dir]["net_params"] = tuple(config_dir[curr_dir]["net_params"])
+        if ("softmax_adaptive" in config_dir[curr_dir]) and (isinstance(config_dir[curr_dir]["softmax_adaptive"], list)):
+            config_dir[curr_dir]["softmax_adaptive"] = tuple(config_dir[curr_dir]["softmax_adaptive"])
 
     return pd.DataFrame(config_dir).T
 
@@ -250,9 +251,10 @@ def _get_acc(models, test_loader, loss):
     return acc_dict
 
 def get_acc(experiment_folder, step, FCN=False):
+    print("Get acc")
     # init
     acc_dict = {}
-    loss = torch.nn.CrossEntropyLoss()
+    criterion = torch.nn.CrossEntropyLoss()
 
     # get data
     train_data, test_data = get_postprocessing_data(experiment_folder, FCN)
@@ -263,10 +265,11 @@ def get_acc(experiment_folder, step, FCN=False):
     for curr_dir in os.listdir("{}/resampling".format(experiment_folder)):
         if "DS_Store" in curr_dir:
             continue
-        root = os.path.join("{}/resampling".format(experiment_folder), curr_dir)
         print(curr_dir)
+
+        root = os.path.join("{}/resampling".format(experiment_folder), curr_dir)
         models_dict = get_models(root, step)
-        acc_dict[curr_dir] = _get_acc(models_dict, test_loader, loss)
+        acc_dict[curr_dir] = _get_acc(models_dict, test_loader, criterion)
 
         # cache data
         cache_data(experiment_folder, "acc", acc_dict)
@@ -399,7 +402,6 @@ def _get_dirichlet_energy(nets, data, num_steps, step_size, var_noise, alpha=1, 
 
 def different_cols(df):
     a = df.to_numpy() # df.values (pandas<0.24)
-    a[:, 14] = 0
     return (a[0] != a[1:]).any(0)
 
 def get_hp(cfs):
@@ -433,9 +435,10 @@ def get_dirichlet_energy(experiment_folder, model_step, num_steps=20, step_size=
 def get_stuff(experiment_folder):
     stuff = {}
 
-    stuff_to_try = ["tsne", "runs", "trace"]
+    stuff_to_try = ["tsne", "runs", "trace", "acc"]
 
     for singular_stuff in stuff_to_try:
+        print("Getting {}.".format(singular_stuff))
         try:
             with open(os.path.join(experiment_folder, "postprocessing/cache/{}.pkl".format(singular_stuff)), "rb") as f:
                 stuff[singular_stuff] = pickle.load(f)
@@ -451,13 +454,16 @@ def main(experiment_name):
     # names = ["Loss", "Potential", "Accuracy", "Kish"]
     # run_data = get_runs(experiment_folder, names)
 
-    root_experiment_folder = "/Users/daniellengyel/flat_sharp/flat_sharp/experiments/FashionMNIST/{}"
-    exp =  "May14_23-57-49_Daniels-MacBook-Pro-4.local"
+    root_experiment_folder = "/Users/daniellengyel/flat_sharp/flat_sharp/experiments/MNIST/{}"
+    exp = "May21_04-00-13_Daniels-MacBook-Pro-4.local"
     experiment_folder = root_experiment_folder.format(exp)
 
     get_runs(experiment_folder , ["Loss", "Kish", "Potential", "Accuracy", "WeightVarTrace"]) # TODO does not find acc and var
 
-    get_trace(experiment_folder, -1, 1, FCN=True)
+    get_trace(experiment_folder, -1, False, FCN=True)
+
+    get_acc(experiment_folder, -1, FCN=True)
+
     # get_dirichlet_energy(experiment_folder, -1, num_steps=20, step_size=0.001, var_noise=0.5, alpha=1, seed=1, FCN=True)
     get_tsne(experiment_folder, -1)
 

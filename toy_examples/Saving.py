@@ -41,9 +41,6 @@ def create_animation_1d_pictures_particles(all_paths, X, Y, ani_path, graph_deta
 
     density_function = graph_details["density_function"]
 
-
-
-
     for i in range(len(all_paths)):
         curr_paths = all_paths[i]
 

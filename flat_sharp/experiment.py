@@ -18,7 +18,7 @@ config = {}
 # setting hyperparameters
 
 # data specific
-data_name = "FashionMNIST"
+data_name = "MNIST"
 
 if data_name == "CIFAR10":
     num_channels = 3
@@ -40,7 +40,7 @@ elif data_name == "gaussian":
 config["net_name"] = "SimpleNet"
 
 if config["net_name"] == "SimpleNet":
-    width = tune.grid_search([512])
+    width = tune.grid_search([256])
     num_layers = tune.grid_search([4])
     config["net_params"] = [inp_dim, out_dim, width, num_layers]
 elif config["net_name"] == "LeNet":
@@ -48,21 +48,26 @@ elif config["net_name"] == "LeNet":
 
 config["torch_random_seed"] = 1
 
-config["num_steps"] = None # tune.grid_search([25000]) # roughly 50 * 500 / 16
-config["mean_loss_threshold"] = 0.25
+config["num_steps"] = 10000 # tune.grid_search([25000]) # roughly 50 * 500 / 16
+config["mean_loss_threshold"] = 0.01
 
-config["batch_train_size"] = tune.grid_search([128])
-config["batch_test_size"] = tune.grid_search([100])
+config["batch_train_size"] = tune.grid_search([16, 128])
+config["batch_test_size"] = tune.grid_search([1])
 
 config["ess_threshold"] =  None # tune.grid_search([0.97])
-config["sampling_tau"] = 25 # tune.grid_search([100, 500])
+config["sampling_tau"] = 1 # tune.grid_search([1, 25, 100])
+config["sampling_wait"] = 0
 
-config["learning_rate"] = 0.166316 # tune.grid_search(list(np.linspace(1e-2, 1, 20)))
+config["learning_rate"] =  tune.grid_search(list(np.logspace(-1, 0.5, 10))) # 1 # tune.grid_search(list(np.logspace(-2, 1, 10)))
+# config["lr_decay"] =
 config["momentum"] = 0
 
-config["num_nets"] = 10  # would like to make it like other one, where we can define region to initialize
+config["num_nets"] = 20 # would like to make it like other one, where we can define region to initialize
 
-config["softmax_beta"] = tune.grid_search(list(np.linspace(-10, 10, 10))) # e.g. negtive to prioritize low weights
+config["softmax_beta"] = tune.grid_search([0] + list(-np.logspace(-2, 4, 10)) + list(np.logspace(-2, 4, 10))) # e.g. negtive to prioritize low weights
+# offset = tune.grid_search([0.5, 0.25, 0.1])
+config["softmax_adaptive"] = None # [offset, 1000] # offset, and strength
+
 
 config["weight_type"] = "loss_gradient_weights"  # "input_output_forbenius", #
 

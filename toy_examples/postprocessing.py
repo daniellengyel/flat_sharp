@@ -8,7 +8,7 @@ import shutil
 
 
 def _reorder_paths_for_plots(all_paths, process):
-    # want to get order: big_timestep, tau_timestep, particle, point
+    # want to get order: big_timestep, particle, tau_timestep, point
 
     f, grad_f = get_potential(process)
 

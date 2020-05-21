@@ -30,37 +30,39 @@ def train(config, folder_path, train_data, test_data):
 
 
     # Init neural nets and weights
+    nets = get_nets(config)
     num_nets = config["num_nets"]
-    if config["net_name"] == "SimpleNet":
-        nets = [SimpleNet(*config["net_params"]) for _ in range(num_nets)]
-    elif config["net_name"] == "LeNet":
-        nets = [LeNet(*config["net_params"]) for _ in range(num_nets)]
-    else:
-        raise NotImplementedError("{} is not implemented.".format(config["net_name"]))
     nets_weights = np.zeros(num_nets)
 
     #  Define a Loss function and optimizer
     criterion = torch.nn.CrossEntropyLoss()
-    optimizers = [optim.SGD(nets[i].parameters(), lr=config["learning_rate"],
-                            momentum=config["momentum"]) for i in range(num_nets)]
+    get_opt_func = get_optimizers(config)
+    optimizers = get_opt_func(nets)
+    # optimizers = [optim.SGD(nets[i].parameters(), lr=config["learning_rate"],
+    #                         momentum=config["momentum"]) for i in range(num_nets)]
 
     # Set algorithm params
     weight_type = config["weight_type"]
     beta = config["softmax_beta"]
+    softmax_adaptive = config["softmax_adaptive"]
     ess_threshold = config["ess_threshold"]
     sampling_tau = config["sampling_tau"]
+    sampling_wait = config["sampling_wait"]
+    if sampling_wait is None:
+        sampling_wait = 0
     assert not ((ess_threshold is not None) and (sampling_tau is not None))
     if ess_threshold is not None:
-        should_resample = lambda w, s: (kish_effs(w) < ess_threshold) and (beta != 0)
+        should_resample = lambda w, s: (kish_effs(w) < ess_threshold) and (beta != 0) and (s >= sampling_wait)
     elif sampling_tau is not None:
-        should_resample = lambda w, s: (s % sampling_tau == 0) and (s > 0)
+        should_resample = lambda w, s: (s % sampling_tau == 0) and (s > 0) and (s >= sampling_wait) and (beta != 0)
     else:
         should_resample = lambda w, s: False
 
     num_steps = config["num_steps"]
     mean_loss_threshold = config["mean_loss_threshold"]
-    assert not ((num_steps is not None) and (mean_loss_threshold is not None))
-    if num_steps is not None:
+    if (num_steps is not None) and (mean_loss_threshold is not None):
+        stopping_criterion = lambda ml, s: (num_steps < s) or (ml < mean_loss_threshold)
+    elif num_steps is not None:
         stopping_criterion = lambda ml, s: num_steps < s
     elif mean_loss_threshold is not None:
         stopping_criterion = lambda ml, s: ml < mean_loss_threshold
@@ -118,6 +120,7 @@ def train(config, folder_path, train_data, test_data):
 
             # Check resample
             if should_resample(nets_weights, curr_step):
+
                 # save nets
                 os.makedirs(os.path.join(folder_path, "resampling", file_stamp, "step_{}".format(curr_step), "models"))
 
@@ -127,11 +130,24 @@ def train(config, folder_path, train_data, test_data):
                 #                             "models", "net_{}.pkl".format(idx_net)))
 
                 # resample particles
-                if beta != 0:
+                if softmax_adaptive is not None:
+                    offset, strength = softmax_adaptive
+                    strength *= np.mean(mean_loss) - offset # TODO change so we can iterate over methods
+                    print(strength)
+                    sampled_idx = sample_index_softmax(nets_weights, nets, beta=strength)
+                    nets = [copy.deepcopy(nets[i]) for i in sampled_idx]
+                    optimizers = get_opt_func(nets, optimizers)
+
+                    # optimizers = [optim.SGD(nets[i].parameters(), lr=config["learning_rate"],
+                    #                         momentum=config["momentum"]) for i in range(num_nets)]
+
+                elif beta != 0:
                     sampled_idx = sample_index_softmax(nets_weights, nets, beta=beta)
                     nets = [copy.deepcopy(nets[i]) for i in sampled_idx]
-                    optimizers = [optim.SGD(nets[i].parameters(), lr=config["learning_rate"],
-                                            momentum=config["momentum"]) for i in range(num_nets)]
+                    optimizers = get_opt_func(nets, optimizers)
+
+                    # optimizers = [optim.SGD(nets[i].parameters(), lr=config["learning_rate"],
+                    #                         momentum=config["momentum"]) for i in range(num_nets)]
                 else:
                     sampled_idx = list(range(num_nets))
 

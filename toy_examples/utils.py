@@ -76,10 +76,25 @@ def get_particles(process):
         raise ValueError("Does not support given function {}".format(process["particle_init"]))
     return np.array(particles)
 
+def adaptive_softmax_beta(process):
+    def helper(w, end_p):
+        # get potential_function and gradient
+        U, grad_U = get_potential(process)
+        U_out = U(end_p.T)
+
+        offset, beta = process["softmax_beta_function"]
+        w *= (np.mean(U_out) - offset)
+        print((np.mean(U_out) - offset))
+        return resample_positions_softmax(w, end_p, beta=beta)
+
+    return helper
+
 def get_resample_function(process):
     if (process["softmax_beta"] is not None) and (process["softmax_beta"] != 0):
         resample_beta = process["softmax_beta"]
         p_resample_func = lambda w, end_p: resample_positions_softmax(w, end_p, beta=resample_beta)
+    elif process["softmax_beta_function"] is not None:
+        p_resample_func = adaptive_softmax_beta(process)
     else:
         p_resample_func = lambda w, end_p: end_p
     return p_resample_func
@@ -115,7 +130,6 @@ def get_init_density(process):
     else:
         raise ValueError("Does not support given function {}".format(process["density_init"]["name"]))
 
-# -------
 # diffusion stuff
 def resample_positions_softmax(weights, positions, beta=1):
     probabilities = softmax(weights, beta)
