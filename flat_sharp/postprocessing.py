@@ -243,18 +243,20 @@ def get_trace(experiment_folder, step,  use_gpu=False, FCN=False):
     return trace_dict
 
 
-def _get_acc(models, test_loader, loss):
-    acc_dict = {}
-    # get eigenvals
-    for k, m in models.items():
-        acc_dict[k] = get_net_accuracy(m, test_loader)
-    return acc_dict
+def _get_loss_acc(models, train_loader, test_loader):
+    test_acc_dict = {}
+    train_loss_dict = {}
 
-def get_acc(experiment_folder, step, FCN=False):
-    print("Get acc")
+    for k, m in models.items():
+        test_acc_dict[k] = get_net_accuracy(m, test_loader)
+        train_loss_dict[k] = get_net_loss(m, train_loader)
+    return test_acc_dict, train_loss_dict
+
+def get_loss_acc(experiment_folder, step, FCN=False):
+    print("Get loss acc")
     # init
-    acc_dict = {}
-    criterion = torch.nn.CrossEntropyLoss()
+    test_acc_dict = {}
+    train_loss_dict = {}
 
     # get data
     train_data, test_data = get_postprocessing_data(experiment_folder, FCN)
@@ -269,12 +271,14 @@ def get_acc(experiment_folder, step, FCN=False):
 
         root = os.path.join("{}/resampling".format(experiment_folder), curr_dir)
         models_dict = get_models(root, step)
-        acc_dict[curr_dir] = _get_acc(models_dict, test_loader, criterion)
+        test_acc_dict[curr_dir], train_loss_dict[curr_dir] = _get_loss_acc(models_dict, train_loader, test_loader)
 
         # cache data
-        cache_data(experiment_folder, "acc", acc_dict)
+        cache_data(experiment_folder, "acc", test_acc_dict)
+        cache_data(experiment_folder, "loss", train_loss_dict)
 
-    return acc_dict
+    return train_loss_dict, test_acc_dict
+
 
 def _get_tsne(models):
     models_vecs = np.array([get_params_vec(m).detach().numpy() for k, m in sorted(models.items(), key=lambda item: int(item[0]))])
@@ -300,6 +304,34 @@ def get_tsne(experiment_folder, step):
 
     return tsne_dict
 
+def _get_final_distances(beginning_models, final_models):
+    dist_arr = []
+    for i in range(len(beginning_models)):
+        b_vec = get_params_vec(beginning_models[str(i)])
+        f_vec = get_params_vec(final_models[str(i)])
+        dist_arr.append(float(torch.norm(b_vec - f_vec)))
+
+    return dist_arr
+
+def get_final_distances(experiment_folder):
+    # init
+    dist_dict = {}
+
+    # iterate through models
+    for curr_dir in os.listdir("{}/resampling".format(experiment_folder)):
+        if "DS_Store" in curr_dir:
+            continue
+
+        root = os.path.join("{}/resampling".format(experiment_folder), curr_dir)
+        print(curr_dir)
+        beginning_models_dict = get_models(root, 0)
+        final_models_dict = get_models(root, -1)
+        dist_dict[curr_dir] = _get_final_distances(beginning_models_dict, final_models_dict)
+
+        # cache data
+        cache_data(experiment_folder, "dist", dist_dict)
+
+    return dist_dict
 
 
 def cache_data(experiment_folder, name, data):
@@ -373,6 +405,7 @@ def get_tsne_dict(experiment_folder, curr_dir):
         tsne_dict[step] = X_embedded
     return tsne_dict
 
+
 def _get_dirichlet_energy(nets, data, num_steps, step_size, var_noise, alpha=1, seed=1):
     """We use an OU process cetered at net.
     alpha is bias strength in OU."""
@@ -435,7 +468,7 @@ def get_dirichlet_energy(experiment_folder, model_step, num_steps=20, step_size=
 def get_stuff(experiment_folder):
     stuff = {}
 
-    stuff_to_try = ["tsne", "runs", "trace", "acc"]
+    stuff_to_try = ["tsne", "runs", "trace", "acc", "dist", "loss"]
 
     for singular_stuff in stuff_to_try:
         print("Getting {}.".format(singular_stuff))
@@ -455,17 +488,19 @@ def main(experiment_name):
     # run_data = get_runs(experiment_folder, names)
 
     root_experiment_folder = "/Users/daniellengyel/flat_sharp/flat_sharp/experiments/MNIST/{}"
-    exp = "May21_04-34-11_Daniels-MacBook-Pro-4.local"
+    exp = "May22_04-04-01_Daniels-MacBook-Pro-4.local"
     experiment_folder = root_experiment_folder.format(exp)
 
     get_runs(experiment_folder , ["Loss", "Kish", "Potential", "Accuracy", "WeightVarTrace"]) # TODO does not find acc and var
 
+    # get_final_distances(experiment_folder)
+
     get_trace(experiment_folder, -1, False, FCN=True)
 
-    get_acc(experiment_folder, -1, FCN=True)
+    get_loss_acc(experiment_folder, -1, FCN=True)
 
     # get_dirichlet_energy(experiment_folder, -1, num_steps=20, step_size=0.001, var_noise=0.5, alpha=1, seed=1, FCN=True)
-    get_tsne(experiment_folder, -1)
+    # get_tsne(experiment_folder, -1)
 
 
 if __name__ == "__main__":

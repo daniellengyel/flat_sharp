@@ -234,11 +234,11 @@ def get_average_output(nets, inp):
     return np.mean(outs, axis=0)
 
 
-def get_net_accuracy(net, test_loader, full_dataset=False):
+def get_net_accuracy(net, data_loader, full_dataset=False):
     correct = 0
     _sum = 0
 
-    for idx, (test_x, test_label) in enumerate(test_loader):
+    for idx, (test_x, test_label) in enumerate(data_loader):
         predict_y = net(test_x.float()).detach()
         predict_ys = np.argmax(predict_y, axis=-1)
         label_np = test_label.numpy()
@@ -249,6 +249,19 @@ def get_net_accuracy(net, test_loader, full_dataset=False):
             break
     return correct / float(_sum)
 
+
+def get_net_loss(net, data_loader, full_dataset=False):
+    criterion = torch.nn.CrossEntropyLoss()
+
+    loss_sum = 0
+    for idx, (inputs, labels) in enumerate(data_loader):
+
+        outputs = net(inputs)
+        loss_sum += float(criterion(outputs.float(), labels))
+        if not full_dataset:
+            break
+
+    return loss_sum / (idx + 1)
 
 # exploring loss landscape
 def unbiased_weight_estimate(net, data, criterion, num_samples=3, batch_size=500, max_steps=3):

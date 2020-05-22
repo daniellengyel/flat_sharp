@@ -30,39 +30,65 @@ def get_end_stats(stuff):
     else:
         accs = None
 
+    if "loss" in stuff:
+        loss = stuff["loss"]
+    else:
+        loss = None
+
+    if "dist" in stuff:
+        dist = stuff["dist"]
+    else:
+        dist = None
+
     configs = stuff["configs"]
     for exp_id in configs.index:
+
         num_nets = configs.loc[exp_id]["num_nets"]
         try:
             num_steps = max(runs[exp_id], key=lambda x: int(x))
         except:
             continue
 
-        stats_dict[str(exp_id)] = {}
+        try:
+            stats_dict[str(exp_id)] = {}
 
-        Loss_train_list = [runs[exp_id][num_steps - 1]["Loss"]["train"]["net"][str(nn)] for nn in range(num_nets)]
+            if loss is None:
+                Loss_train_list = [runs[exp_id][num_steps - 1]["Loss"]["train"]["net"][str(nn)] for nn in range(num_nets)]
+            else:
+                Loss_train_list = [loss[exp_id][str(nn)] for nn in range(num_nets)]
 
-        stats_dict[str(exp_id)]["Mean Train Loss"] = np.mean(Loss_train_list)
-        stats_dict[str(exp_id)]["Max Train Loss"] = np.max(Loss_train_list)
-        stats_dict[str(exp_id)]["Min Train Loss"] = np.min(Loss_train_list)
+            stats_dict[str(exp_id)]["Train Loss Mean"] = np.mean(Loss_train_list)
+            stats_dict[str(exp_id)]["Train Loss Max"] = np.max(Loss_train_list)
+            stats_dict[str(exp_id)]["Train Loss Min"] = np.min(Loss_train_list)
 
-        if accs is None:
-            Acc_test_list = [runs[exp_id][num_steps]["Accuracy"]["net"][str(nn)] for nn in range(num_nets)]
-        else:
-            Acc_test_list = [accs[exp_id][str(nn)] for nn in range(num_nets)]
+            if accs is None:
+                Acc_test_list = [runs[exp_id][num_steps]["Accuracy"]["net"][str(nn)] for nn in range(num_nets)]
+            else:
+                Acc_test_list = [accs[exp_id][str(nn)] for nn in range(num_nets)]
 
-        stats_dict[str(exp_id)]["Mean Test Acc"] = np.mean(Acc_test_list)
-        stats_dict[str(exp_id)]["Max Test Acc"] = np.max(Acc_test_list)
-        stats_dict[str(exp_id)]["Min Test Acc"] = np.min(Acc_test_list)
+            stats_dict[str(exp_id)]["Test Acc Mean"] = np.mean(Acc_test_list)
+            stats_dict[str(exp_id)]["Test Acc Max"] = np.max(Acc_test_list)
+            stats_dict[str(exp_id)]["Test Acc Min"] = np.min(Acc_test_list)
+
+        except:
+            print("Error: No runs for {}".format(exp_id))
+
+
+        if dist is not None:
+            stats_dict[str(exp_id)]["Dist Mean"] = np.mean(dist[exp_id])
+            stats_dict[str(exp_id)]["Dist Max"] = np.max(dist[exp_id])
+            stats_dict[str(exp_id)]["Dist Min"] = np.min(dist[exp_id])
+
+
 
 
         try:
             Trace_list = [np.mean(trace[exp_id][str(nn)]) for nn in range(num_nets)]
             Trace_std_list = [np.std(trace[exp_id][str(nn)]) for nn in range(num_nets)]
-            stats_dict[str(exp_id)]["Mean Trace"] = np.mean(Trace_list)
-            stats_dict[str(exp_id)]["Mean Std Trace"] = np.mean(Trace_std_list)
-            stats_dict[str(exp_id)]["Max Trace"] = np.max(Trace_list)
-            stats_dict[str(exp_id)]["Min Trace"] = np.min(Trace_list)
+            stats_dict[str(exp_id)]["Trace Mean"] = np.mean(Trace_list)
+            stats_dict[str(exp_id)]["Trace Mean Std"] = np.mean(Trace_std_list)
+            stats_dict[str(exp_id)]["Trace Max"] = np.max(Trace_list)
+            stats_dict[str(exp_id)]["Trace Min"] = np.min(Trace_list)
 
 
             # print(dict_key)
@@ -111,15 +137,12 @@ def _plot(plots, plots_names, X_axis_name, Y_axis_name, X_axis_bounds, Y_axis_bo
     plt.show()
 
 
-def plot_stats(stats_pd, X_axis_name, Y_axis_name, filter_by=None, seperate=False, X_axis_bounds=None,
+def plot_stats(stats_pd, X_axis_name, Y_axis_name, filter_seperate=None, filter_not_seperate=None, X_axis_bounds=None,
                Y_axis_bounds=None):
     plots = []
     plots_names = []
 
-    if ((filter_by is not None) and ("lr_bs_ratio" in filter_by)) or (X_axis_name == "lr_bs_ratio") or (Y_axis_name == "lr_bs_ratio"):
-        stats_pd["lr_bs_ratio"] = stats_pd["learning_rate"] / stats_pd["batch_train_size"]
-
-    if filter_by is None:
+    if (filter_seperate is None) and (filter_not_seperate is None):
         x_values = stats_pd[X_axis_name].to_numpy()
         y_values = stats_pd[Y_axis_name].to_numpy()
 
@@ -127,26 +150,38 @@ def plot_stats(stats_pd, X_axis_name, Y_axis_name, filter_by=None, seperate=Fals
         plots_names.append("Plot all")
         _plot(plots, plots_names, X_axis_name, Y_axis_name, X_axis_bounds, Y_axis_bounds)
     else:
+        if (("lr_bs_ratio" in filter_seperate) or ("lr_bs_ratio" in filter_not_seperate)) or (X_axis_name == "lr_bs_ratio") or (
+                Y_axis_name == "lr_bs_ratio"):
+            stats_pd["lr_bs_ratio"] = stats_pd["learning_rate"] / stats_pd["batch_train_size"]
 
-        unique_filter_dict = {f: list(set(stats_pd[f])) for f in filter_by}
-        unique_filter_keys = list(unique_filter_dict.keys())
-        for comb in itertools.product(*unique_filter_dict.values()):
 
-            filter_pd = stats_pd[(stats_pd[unique_filter_keys] == comb).to_numpy().all(1)]
+        if filter_seperate is None:
+            filter_seperate = []
 
-            x_values = filter_pd[X_axis_name].to_numpy()
-            y_values = filter_pd[Y_axis_name].to_numpy()
+        unique_seperate_filter_dict = {f: list(set(stats_pd[f])) for f in filter_seperate}
+        unique_seperate_filter_keys = list(unique_seperate_filter_dict.keys())
 
-            plots.append(plt.scatter(x_values, y_values))
-            plots_names.append(comb)
-            if seperate:
-                _plot(plots, plots_names, X_axis_name, Y_axis_name, X_axis_bounds, Y_axis_bounds)
-                plots = []
-                plots_names = []
+        unique_not_seperate_filter_dict = {f: list(set(stats_pd[f])) for f in filter_not_seperate}
+        unique_not_seperate_filter_keys = list(unique_not_seperate_filter_dict.keys())
 
-        if not seperate:
+        unique_all_filter_keys = unique_seperate_filter_keys + unique_not_seperate_filter_keys
+
+        for s_comb in itertools.product(*unique_seperate_filter_dict.values()):
+
+            for ns_comb in itertools.product(*unique_not_seperate_filter_dict.values()):
+                comb = s_comb + ns_comb
+
+                filter_pd = stats_pd[(stats_pd[unique_all_filter_keys] == comb).to_numpy().all(1)]
+
+                x_values = filter_pd[X_axis_name].to_numpy()
+                y_values = filter_pd[Y_axis_name].to_numpy()
+
+                plots.append(plt.scatter(x_values, y_values))
+                plots_names.append(comb)
+
             _plot(plots, plots_names, X_axis_name, Y_axis_name, X_axis_bounds, Y_axis_bounds)
-
+            plots = []
+            plots_names = []
 
 
 def what_it_do():
@@ -332,3 +367,98 @@ def get_stat_step(exp_dict, var_name, step, exp_ids= None):
 
 
     return exp_res
+
+
+def get_mod_idx(d, mod):
+    if mod == "all":
+        return sorted(d.keys(), key=lambda x: int(x))
+
+    sorted_d = sorted(d.items(), key=lambda item: item[-1])
+    if mod == "max":
+        idx = sorted_d[-1][0]
+    else:
+        idx = sorted_d[0][0]
+    return [idx]
+
+
+def get_plot_trace_acc(exp_dict, exp_ids, X_axis_name, Y_axis_name):
+    X_axis_name_split = X_axis_name.split(" ")
+    Y_axis_name_split = Y_axis_name.split(" ")
+
+    if len(X_axis_name_split) == 2:
+        X_type, X_mod = X_axis_name_split
+        Y_type, Y_mod = Y_axis_name, None
+    else:
+        Y_type, Y_mod = Y_axis_name_split
+        X_type, X_mod = X_axis_name, None
+
+
+    assert not ((X_mod is not None) and (Y_mod is not None))
+    assert (X_mod is not None) or (Y_mod is not None)
+
+
+    Xs = exp_dict["stuff"][X_type]
+    Ys = exp_dict["stuff"][Y_type]
+
+
+    x_vals = []
+    y_vals = []
+    for exp_id in exp_ids:
+        if X_mod is not None:
+            nn_idxs = get_mod_idx(Xs[exp_id], X_mod)
+        else:
+            nn_idxs = get_mod_idx(Ys[exp_id], Y_mod)
+
+        if (len(nn_idxs) == 0):
+            continue
+
+        x_vals.append([np.mean(Xs[exp_id][i]) for i in nn_idxs])
+        y_vals.append([np.mean(Ys[exp_id][i]) for i in nn_idxs])
+
+
+    return np.array(x_vals).reshape(-1), np.array(y_vals).reshape(-1)
+
+
+def plot_special(exp_dict, X_axis_name, Y_axis_name, filter_seperate=None, filter_not_seperate=None):
+
+    plots = []
+    plots_names = []
+
+    cfs = exp_dict["stuff"]["configs"]
+
+    X_axis_bounds, Y_axis_bounds = None, None
+
+    if (filter_seperate is None) and (filter_not_seperate is None):
+        x_vals, y_vals = get_plot_trace_acc(exp_dict, list(cfs.index), X_axis_name, Y_axis_name)
+        plots.append(plt.scatter(x_vals, y_vals))
+        plots_names.append("Plot all")
+        _plot(plots, plots_names, X_axis_name, Y_axis_name, X_axis_bounds=X_axis_bounds, Y_axis_bounds=Y_axis_bounds)
+    else:
+        if filter_seperate is None:
+            filter_seperate = []
+
+        unique_seperate_filter_dict = {f: list(set(cfs[f])) for f in filter_seperate}
+        unique_seperate_filter_keys = list(unique_seperate_filter_dict.keys())
+
+        unique_not_seperate_filter_dict = {f: list(set(cfs[f])) for f in filter_not_seperate}
+        unique_not_seperate_filter_keys = list(unique_not_seperate_filter_dict.keys())
+
+        unique_all_filter_keys = unique_seperate_filter_keys + unique_not_seperate_filter_keys
+
+        for s_comb in itertools.product(*unique_seperate_filter_dict.values()):
+
+            for ns_comb in itertools.product(*unique_not_seperate_filter_dict.values()):
+
+                comb = s_comb + ns_comb
+
+                exp_ids = list(cfs[(cfs[unique_all_filter_keys] == comb).to_numpy().all(1)].index)
+
+                x_vals, y_vals = get_plot_trace_acc(exp_dict, exp_ids, X_axis_name, Y_axis_name)
+
+                plots.append(plt.scatter(x_vals, y_vals))
+                plots_names.append(comb)
+
+            _plot(plots, plots_names, X_axis_name, Y_axis_name, X_axis_bounds, Y_axis_bounds)
+            plots = []
+            plots_names = []
+
