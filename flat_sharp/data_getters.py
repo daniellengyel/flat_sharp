@@ -9,7 +9,7 @@ import os
 
 PATH_TO_DATA = "{}/data".format(os.environ["PATH_TO_FLAT_FOLDER"])
 
-def get_data(data_name, vectorized=False):
+def get_data(data_name, vectorized=False, reduce_train_per=None):
     if data_name == "gaussian":
         train_data, test_data = _get_gaussian()
     elif data_name == "MNIST":
@@ -20,8 +20,10 @@ def get_data(data_name, vectorized=False):
         train_data, test_data = _get_FashionMNIST()
     else:
         raise NotImplementedError("{} is not implemented.".format(data_name))
+    if reduce_train_per is not None:
+        train_data = ReducedData(train_data, reduce_train_per)
     if vectorized:
-        return VectorizedWrapper(train_data), VectorizedWrapper(test_data)
+        train_data, test_data = VectorizedWrapper(train_data), VectorizedWrapper(test_data)
     return train_data, test_data
 
 def _get_MNIST():
@@ -153,3 +155,18 @@ class VectorizedWrapper():
 
     def __len__(self):
         return len(self.data)
+
+class ReducedData:
+    def __init__(self, data, per):
+        np.random.seed(1)
+        self.num_data = len(data)
+        self.per = per
+        self.idxs = np.random.choice(list(range(self.num_data)), int(self.num_data * self.per))
+        self.data = data
+
+    def __getitem__(self, item):
+        data, target = self.data.__getitem__(self.idxs[item])
+        return data, target
+
+    def __len__(self):
+        return int(self.num_data * self.per)

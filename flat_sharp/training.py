@@ -5,6 +5,9 @@ import torch
 import torchvision
 import torch.optim as optim
 
+from pyhessian import hessian
+
+
 from torch.utils.tensorboard import SummaryWriter
 
 from utils import *
@@ -36,6 +39,7 @@ def train(config, folder_path, train_data, test_data):
     nets = get_nets(config)
     num_nets = config["num_nets"]
     nets_weights = np.zeros(num_nets)
+    num_steps = config["num_steps"]
 
     #  Define a Loss function and optimizer
     criterion = torch.nn.CrossEntropyLoss()
@@ -51,17 +55,19 @@ def train(config, folder_path, train_data, test_data):
     ess_threshold = config["ess_threshold"]
     sampling_tau = config["sampling_tau"]
     sampling_wait = config["sampling_wait"]
+    sampling_stop = config["sampling_stop"]
+    if sampling_stop is None:
+        sampling_stop = float("inf")
     if sampling_wait is None:
         sampling_wait = 0
     assert not ((ess_threshold is not None) and (sampling_tau is not None))
     if ess_threshold is not None:
         should_resample = lambda w, s: (kish_effs(w) < ess_threshold) and (beta != 0) and (s >= sampling_wait)
     elif sampling_tau is not None:
-        should_resample = lambda w, s: (s % sampling_tau == 0) and (s > 0) and (s >= sampling_wait) and (beta != 0)
+        should_resample = lambda w, s: (s % sampling_tau == 0) and (s > 0) and (s >= sampling_wait) and (beta != 0) and (s < sampling_stop)
     else:
         should_resample = lambda w, s: False
 
-    num_steps = config["num_steps"]
     mean_loss_threshold = config["mean_loss_threshold"]
     if (num_steps is not None) and (mean_loss_threshold is not None):
         stopping_criterion = lambda ml, s: (num_steps < s) or (ml < mean_loss_threshold)
@@ -105,6 +111,7 @@ def train(config, folder_path, train_data, test_data):
             if (curr_step % 100) == 1:
                 print("Step: {}".format(curr_step))
                 print("Mean Loss: {}".format(mean_loss))
+                # print("Mean Sampling Weights: {}".format(np.mean(nets_weights)))
 
             # do update step for each net
             nets, nets_weights, took_step, mean_loss_after_step = _training_step(nets, nets_weights, optimizers, net_data_loaders, criterion, weight_type, curr_step=curr_step, writer=writer)
@@ -150,7 +157,6 @@ def train(config, folder_path, train_data, test_data):
 
                 else:
                     sampled_idx = list(range(num_nets))
-
 
                 nets_weights = np.zeros(num_nets)
 
@@ -248,6 +254,11 @@ def _training_step(nets, nets_weights, net_optimizers, net_data_loaders, criteri
             writer.add_scalar('Potential/curr/net_{}'.format(idx_net), curr_weight, curr_step)
             writer.add_scalar('Potential/total/net_{}'.format(idx_net), nets_weights[idx_net], curr_step)
             writer.add_scalar('Norm/net_{}'.format(idx_net), torch.norm(get_params_vec(net)), curr_step)
+            if (curr_step % 50) == 0:
+                # a = time.time()
+                trace = np.mean(hessian(net, criterion, data=(inputs, labels), cuda=False).trace())
+                writer.add_scalar('Trace/net_{}'.format(idx_net), trace, curr_step)
+                # print("Getting trace took {}".format(time.time() - a))
 
         mean_loss += float(loss)
 

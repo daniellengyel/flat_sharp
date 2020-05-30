@@ -136,7 +136,7 @@ def get_configs(experiment_folder):
 def get_postprocessing_data(experiment_folder, vectorized=True):
     data_type = experiment_folder.split("/")[-2]
     if data_type == "MNIST":
-        return get_data("MNIST", vectorized)
+        return get_data("MNIST", vectorized, reduce_train_per=0.1)
     if data_type == "FashionMNIST":
         return get_data("FashionMNIST", vectorized)
     if data_type == "CIFAR10":
@@ -242,25 +242,79 @@ def get_trace(experiment_folder, step,  use_gpu=False, FCN=False):
 
     return trace_dict
 
+def _get_grad(models, data_loader, criterion, full_dataset=True):
+    grad_dict = {}
+
+
+    # get trace
+    for k, m in models.items():
+        weight_sum = 0
+        for i, (inputs, labels) in enumerate(data_loader):
+            print(k)
+            # Compute gradients for input.
+            inputs.requires_grad = True
+
+            m.zero_grad()
+
+            outputs = m(inputs)
+            loss = criterion(outputs.float(), labels)
+            loss.backward(retain_graph=True)
+
+            param_grads = get_grad_params_vec(m)
+            weight_sum += torch.norm(param_grads)
+
+            if full_dataset:
+                break
+
+        grad_dict[k] = weight_sum/float(len(data_loader))
+
+
+    return grad_dict
+
+
+def get_grad(experiment_folder, step,  use_gpu=False, FCN=False):
+    # init
+    grad_dict = {}
+    criterion = torch.nn.CrossEntropyLoss()
+
+    # get data
+    train_data, test_data = get_postprocessing_data(experiment_folder, FCN)
+    train_loader = DataLoader(train_data, batch_size=len(train_data), shuffle=True)  # fix the batch size
+    test_loader = DataLoader(test_data, batch_size=len(test_data))
+
+    # iterate through models
+    for curr_dir in os.listdir("{}/resampling".format(experiment_folder)):
+        if "DS_Store" in curr_dir:
+            continue
+        root = os.path.join("{}/resampling".format(experiment_folder), curr_dir)
+        print(curr_dir)
+        models_dict = get_models(root, step)
+        grad_dict[curr_dir] = _get_grad(models_dict, train_loader, criterion, full_dataset=False)
+
+        # cache data
+        cache_data(experiment_folder, "grad", grad_dict)
+
+    return grad_dict
+
 
 def _get_loss_acc(models, train_loader, test_loader):
-    test_acc_dict = {}
-    train_loss_dict = {}
+    loss_dict = {}
+    acc_dict = {}
 
     for k, m in models.items():
-        test_acc_dict[k] = get_net_accuracy(m, test_loader)
-        train_loss_dict[k] = get_net_loss(m, train_loader)
-    return test_acc_dict, train_loss_dict
+        loss_dict[k] = (get_net_loss(m, train_loader), get_net_loss(m, test_loader))
+        acc_dict[k] = (get_net_accuracy(m, train_loader), get_net_accuracy(m, test_loader))
+    return loss_dict, acc_dict
 
 def get_loss_acc(experiment_folder, step, FCN=False):
     print("Get loss acc")
     # init
-    test_acc_dict = {}
-    train_loss_dict = {}
+    loss_dict = {}
+    acc_dict = {}
 
     # get data
     train_data, test_data = get_postprocessing_data(experiment_folder, FCN)
-    train_loader = DataLoader(train_data, batch_size=5000, shuffle=True)  # fix the batch size
+    train_loader = DataLoader(train_data, batch_size=len(train_data), shuffle=True)  # fix the batch size
     test_loader = DataLoader(test_data, batch_size=len(test_data))
 
     # iterate through models
@@ -271,13 +325,13 @@ def get_loss_acc(experiment_folder, step, FCN=False):
 
         root = os.path.join("{}/resampling".format(experiment_folder), curr_dir)
         models_dict = get_models(root, step)
-        test_acc_dict[curr_dir], train_loss_dict[curr_dir] = _get_loss_acc(models_dict, train_loader, test_loader)
+        loss_dict[curr_dir], acc_dict[curr_dir] = _get_loss_acc(models_dict, train_loader, test_loader)
 
         # cache data
-        cache_data(experiment_folder, "acc", test_acc_dict)
-        cache_data(experiment_folder, "loss", train_loss_dict)
+        cache_data(experiment_folder, "loss", loss_dict)
+        cache_data(experiment_folder, "acc", acc_dict)
 
-    return train_loss_dict, test_acc_dict
+    return loss_dict, acc_dict
 
 
 def _get_tsne(models):
@@ -468,7 +522,7 @@ def get_dirichlet_energy(experiment_folder, model_step, num_steps=20, step_size=
 def get_stuff(experiment_folder):
     stuff = {}
 
-    stuff_to_try = ["tsne", "runs", "trace", "acc", "dist", "loss"]
+    stuff_to_try = ["tsne", "runs", "trace", "acc", "dist", "loss", "grad"]
 
     for singular_stuff in stuff_to_try:
         print("Getting {}.".format(singular_stuff))
@@ -488,16 +542,18 @@ def main(experiment_name):
     # run_data = get_runs(experiment_folder, names)
 
     root_experiment_folder = "/Users/daniellengyel/flat_sharp/flat_sharp/experiments/MNIST/{}"
-    exp = "May22_04-04-01_Daniels-MacBook-Pro-4.local"
+    exp = "May28_03-15-04_Daniels-MacBook-Pro-4.local"
     experiment_folder = root_experiment_folder.format(exp)
 
-    get_runs(experiment_folder , ["Loss", "Kish", "Potential", "Accuracy", "WeightVarTrace"]) # TODO does not find acc and var
-
+    get_runs(experiment_folder , ["Loss", "Kish", "Potential", "Accuracy", "WeightVarTrace", "Norm", "Trace"]) # TODO does not find acc and var
+    #
     # get_final_distances(experiment_folder)
-
+    #
     get_trace(experiment_folder, -1, False, FCN=True)
-
+    #
     get_loss_acc(experiment_folder, -1, FCN=True)
+
+    get_grad(experiment_folder, -1, False, FCN=True)
 
     # get_dirichlet_energy(experiment_folder, -1, num_steps=20, step_size=0.001, var_noise=0.5, alpha=1, seed=1, FCN=True)
     # get_tsne(experiment_folder, -1)

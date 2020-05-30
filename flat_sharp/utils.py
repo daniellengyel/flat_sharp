@@ -303,3 +303,35 @@ def unbiased_weight_estimate(net, data, criterion, num_samples=3, batch_size=500
             weights.append((torch.norm(curr_grad) ** 2 - tmp_w_2) / (num_samples * (num_samples - 1)))
             steps += 1
     return np.mean(weights)
+
+
+def sampling_plot_arr(values_arr, resampling_arr):
+    x_vals = []
+    y_vals = []
+
+    for p in range(len(values_arr)):
+        last_resampling = 0
+        already_added = False
+
+        for t in range(len(values_arr[p])):
+            if resampling_arr[t][p] != p:
+                if (last_resampling == 0) and (not already_added):
+                    x_vals.append(list(range(last_resampling, t + 1)))
+                    y_vals.append(values_arr[p][last_resampling:t + 1])
+                    already_added = True
+                else:
+                    starts_at = values_arr[resampling_arr[last_resampling][p]][last_resampling]
+                    x_vals.append(list(range(last_resampling, t + 1)))
+                    y_vals.append([starts_at] + values_arr[p][last_resampling + 1:t + 1])
+
+                last_resampling = t
+
+        if (last_resampling == 0):
+            x_vals.append(list(range(last_resampling, t + 1)))
+            y_vals.append(values_arr[p][last_resampling:t + 1])
+        else:
+            starts_at = values_arr[resampling_arr[last_resampling][p]][last_resampling]
+            x_vals.append(list(range(last_resampling, t + 1)))
+            y_vals.append([starts_at] + values_arr[p][last_resampling + 1:t + 1])
+    return x_vals, y_vals
+
