@@ -47,7 +47,7 @@ class SimpleNet(Module):
         super(SimpleNet, self).__init__()
 
         self.fc1 = nn.Linear(inp_dim, width)
-        self.layers = [nn.Linear(width, width) for _ in range(num_layers - 1)]
+        self.layers = nn.ModuleList([nn.Linear(width, width) for _ in range(num_layers - 1)])
         self.fc2 = nn.Linear(width, out_dim)
 
     def forward(self, x):

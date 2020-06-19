@@ -12,6 +12,8 @@ PATH_TO_DATA = "{}/data".format(os.environ["PATH_TO_FLAT_FOLDER"])
 def get_data(data_name, vectorized=False, reduce_train_per=None):
     if data_name == "gaussian":
         train_data, test_data = _get_gaussian()
+    if data_name == "mis_gauss":
+        train_data, test_data = _get_mis_gauss()
     elif data_name == "MNIST":
         train_data, test_data = _get_MNIST()
     elif data_name == "CIFAR10":
@@ -101,6 +103,24 @@ def _get_gaussian():
 
     return train_gaussian, test_gaussian
 
+def _get_mis_gauss():
+    # get data
+    gaussian_params = []
+
+    cov_1 = np.array([[1, 0], [0, 1]])
+
+    mean_1 = np.array([0, 0])
+
+    means = [mean_1]
+    covs = [cov_1]
+    training_nums = 200
+    test_nums = 120000
+
+    train_gaussian = MisGauss(means, covs, len(means) * [training_nums])
+    test_gaussian = MisGauss(means, covs, len(means) * [test_nums])
+
+    return train_gaussian, test_gaussian
+
 class GaussianMixture(Dataset):
     """Dataset gaussian mixture. Points of first gaussian are mapped to 0 while points in the second are mapped 1.
 
@@ -137,6 +157,64 @@ class GaussianMixture(Dataset):
 
         targets = np.array(ys)  # np.eye(self.num_classes)[ys]
         self.targets = torch.Tensor(targets)
+
+    def __getitem__(self, index):
+        return self.data[index], self.targets[index].long()
+
+    def __len__(self):
+        return len(self.data)
+
+
+class MisGauss(Dataset):
+    """Dataset gaussian mixture. Points of first gaussian are mapped to 0 while points in the second are mapped 1.
+
+    Parameters
+    ----------
+    means:
+        i: mean
+    covs:
+        i: cov
+    nums:
+        i: num for ith class
+    """
+
+    def __init__(self, means, covs, nums):
+        self.data = []
+        self.targets = []
+
+        self.num_classes = len(covs)
+
+        xs = None
+        ys = []
+        for i in range(len(covs)):
+            mean = means[i]
+            cov = covs[i]
+            num = nums[i]
+            x = np.random.multivariate_normal(mean, cov, num)
+            y = 1 * (x[:, 0] >= 0)
+            y = [self._flip(a, 0.05) for a in y]
+            x += np.random.normal(scale=0.15, size=x.shape)
+
+            if xs is None:
+                xs = x
+            else:
+                xs = np.concatenate([xs, x], axis=0)
+
+            ys += y
+
+        self.data = torch.Tensor(xs)
+
+        targets = np.array(ys)  # np.eye(self.num_classes)[ys]
+        self.targets = torch.Tensor(targets)
+
+    def _flip(self, val, alpha=0.05):
+        should_flip = np.random.uniform(0, 1) < alpha
+        if should_flip:
+            if val == 0:
+                val = 1
+            elif val == 1:
+                val = 0
+        return val
 
     def __getitem__(self, index):
         return self.data[index], self.targets[index].long()

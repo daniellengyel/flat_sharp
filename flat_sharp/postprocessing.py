@@ -73,7 +73,10 @@ def get_all_models(experiment_folder, step):
         if "DS_Store" in curr_dir:
             continue
         root = os.path.join("{}/resampling".format(experiment_folder), curr_dir)
-        models_dict[curr_dir] = get_models(root, step)
+        try:
+            models_dict[curr_dir] = get_models(root, step)
+        except:
+            continue
     return models_dict
 
 def _get_sample_idxs(model_folder_path):
@@ -140,8 +143,8 @@ def get_postprocessing_data(experiment_folder, vectorized=True):
     if data_type == "FashionMNIST":
         return get_data("FashionMNIST", vectorized)
     if data_type == "CIFAR10":
-        return get_data("CIFAR10", vectorized)
-    elif data_type == "gaussian":
+        return get_data("CIFAR10", vectorized, reduce_train_per=0.1)
+    elif (data_type == "gaussian") or (data_type == "mis_gauss"):
         with open(os.path.join(experiment_folder, "data.pkl"), "rb") as f:
             data = pickle.load(f)
         return data
@@ -149,7 +152,7 @@ def get_postprocessing_data(experiment_folder, vectorized=True):
         raise NotImplementedError("{} data type is not implemented.".format(data_type))
 
 # get eigenvalues of specific model folder.
-def _get_eig(models, train_loader, test_loader, loss, num_eigenthings=5, use_gpu=False, full_dataset=True):
+def get_models_eig(models, train_loader, test_loader, loss, num_eigenthings=5, use_gpu=False, full_dataset=True):
     eig_dict = {}
     # get eigenvals
     for k, m in models.items():
@@ -169,7 +172,7 @@ def _get_eig(models, train_loader, test_loader, loss, num_eigenthings=5, use_gpu
     return eig_dict
 
 # get eigenvalues of specific model folder.
-def get_eig(experiment_folder, step, num_eigenthings=5, use_gpu=False, FCN=False):
+def get_exp_eig(experiment_folder, step, num_eigenthings=5, use_gpu=False, FCN=False):
     # init
     eigenvalue_dict = {}
     loss = torch.nn.CrossEntropyLoss()
@@ -186,7 +189,7 @@ def get_eig(experiment_folder, step, num_eigenthings=5, use_gpu=False, FCN=False
         root = os.path.join("{}/resampling".format(experiment_folder), curr_dir)
         print(curr_dir)
         models_dict = get_models(root, step)
-        eigenvalue_dict[curr_dir] = _get_eig(models_dict, train_loader, test_loader, loss, num_eigenthings, use_gpu, full_dataset=True)
+        eigenvalue_dict[curr_dir] = get_models_eig(models_dict, train_loader, test_loader, loss, num_eigenthings, use_gpu, full_dataset=True)
 
         # cache data
         cache_data(experiment_folder, "eig", eigenvalue_dict)
@@ -194,7 +197,7 @@ def get_eig(experiment_folder, step, num_eigenthings=5, use_gpu=False, FCN=False
     return eigenvalue_dict
 
 
-def _get_trace(models, data_loader, loss, full_dataset=True):
+def get_models_trace(models, data_loader, criterion, full_dataset=False, verbose=False):
     trace_dict = {}
 
     hessian_dataloader = []
@@ -205,23 +208,24 @@ def _get_trace(models, data_loader, loss, full_dataset=True):
 
     # get trace
     for k, m in models.items():
-        print(k)
+        if verbose:
+            print(k)
         a = time.time()
         ts = []
         if full_dataset:
-            trace = hessian(m, loss, dataloader=hessian_dataloader, cuda=False).trace()
+            trace = hessian(m, criterion, dataloader=hessian_dataloader, cuda=False).trace()
         else:
-            trace = hessian(m, loss, data=hessian_dataloader[0], cuda=False).trace()
+            trace = hessian(m, criterion, data=hessian_dataloader[0], cuda=False).trace()
 
         trace_dict[k] = trace
 
     return trace_dict
 
 
-def get_trace(experiment_folder, step,  use_gpu=False, FCN=False):
+def get_exp_trace(experiment_folder, step,  use_gpu=False, FCN=False):
     # init
     trace_dict = {}
-    loss = torch.nn.CrossEntropyLoss()
+    criterion = torch.nn.CrossEntropyLoss()
 
     # get data
     train_data, test_data = get_postprocessing_data(experiment_folder, FCN)
@@ -235,14 +239,14 @@ def get_trace(experiment_folder, step,  use_gpu=False, FCN=False):
         root = os.path.join("{}/resampling".format(experiment_folder), curr_dir)
         print(curr_dir)
         models_dict = get_models(root, step)
-        trace_dict[curr_dir] = _get_trace(models_dict, train_loader, loss, full_dataset=False)
+        trace_dict[curr_dir] = get_models_trace(models_dict, train_loader, criterion, full_dataset=False, verbose=True)
 
         # cache data
         cache_data(experiment_folder, "trace", trace_dict)
 
     return trace_dict
 
-def _get_grad(models, data_loader, criterion, full_dataset=True):
+def get_models_grad(models, data_loader, criterion, full_dataset=True):
     grad_dict = {}
 
 
@@ -272,7 +276,7 @@ def _get_grad(models, data_loader, criterion, full_dataset=True):
     return grad_dict
 
 
-def get_grad(experiment_folder, step,  use_gpu=False, FCN=False):
+def get_exp_grad(experiment_folder, step,  use_gpu=False, FCN=False):
     # init
     grad_dict = {}
     criterion = torch.nn.CrossEntropyLoss()
@@ -297,7 +301,7 @@ def get_grad(experiment_folder, step,  use_gpu=False, FCN=False):
     return grad_dict
 
 
-def _get_loss_acc(models, train_loader, test_loader):
+def get_models_loss_acc(models, train_loader, test_loader):
     loss_dict = {}
     acc_dict = {}
 
@@ -306,7 +310,7 @@ def _get_loss_acc(models, train_loader, test_loader):
         acc_dict[k] = (get_net_accuracy(m, train_loader), get_net_accuracy(m, test_loader))
     return loss_dict, acc_dict
 
-def get_loss_acc(experiment_folder, step, FCN=False):
+def get_exp_loss_acc(experiment_folder, step, FCN=False):
     print("Get loss acc")
     # init
     loss_dict = {}
@@ -325,7 +329,7 @@ def get_loss_acc(experiment_folder, step, FCN=False):
 
         root = os.path.join("{}/resampling".format(experiment_folder), curr_dir)
         models_dict = get_models(root, step)
-        loss_dict[curr_dir], acc_dict[curr_dir] = _get_loss_acc(models_dict, train_loader, test_loader)
+        loss_dict[curr_dir], acc_dict[curr_dir] = get_models_loss_acc(models_dict, train_loader, test_loader)
 
         # cache data
         cache_data(experiment_folder, "loss", loss_dict)
@@ -334,12 +338,12 @@ def get_loss_acc(experiment_folder, step, FCN=False):
     return loss_dict, acc_dict
 
 
-def _get_tsne(models):
+def get_models_tsne(models):
     models_vecs = np.array([get_params_vec(m).detach().numpy() for k, m in sorted(models.items(), key=lambda item: int(item[0]))])
     X_embedded = TSNE(n_components=2).fit_transform(models_vecs)
     return X_embedded
 
-def get_tsne(experiment_folder, step):
+def get_exp_tsne(experiment_folder, step):
     # init
     tsne_dict = {}
 
@@ -351,14 +355,14 @@ def get_tsne(experiment_folder, step):
         root = os.path.join("{}/resampling".format(experiment_folder), curr_dir)
         print(curr_dir)
         models_dict = get_models(root, step)
-        tsne_dict[curr_dir] = _get_tsne(models_dict)
+        tsne_dict[curr_dir] = get_models_tsne(models_dict)
 
         # cache data
         cache_data(experiment_folder, "tsne", tsne_dict)
 
     return tsne_dict
 
-def _get_final_distances(beginning_models, final_models):
+def get_models_final_distances(beginning_models, final_models):
     dist_arr = []
     for i in range(len(beginning_models)):
         b_vec = get_params_vec(beginning_models[str(i)])
@@ -367,7 +371,7 @@ def _get_final_distances(beginning_models, final_models):
 
     return dist_arr
 
-def get_final_distances(experiment_folder):
+def get_exp_final_distances(experiment_folder):
     # init
     dist_dict = {}
 
@@ -380,7 +384,7 @@ def get_final_distances(experiment_folder):
         print(curr_dir)
         beginning_models_dict = get_models(root, 0)
         final_models_dict = get_models(root, -1)
-        dist_dict[curr_dir] = _get_final_distances(beginning_models_dict, final_models_dict)
+        dist_dict[curr_dir] = get_models_final_distances(beginning_models_dict, final_models_dict)
 
         # cache data
         cache_data(experiment_folder, "dist", dist_dict)
@@ -541,22 +545,22 @@ def main(experiment_name):
     # names = ["Loss", "Potential", "Accuracy", "Kish"]
     # run_data = get_runs(experiment_folder, names)
 
-    root_experiment_folder = "/Users/daniellengyel/flat_sharp/flat_sharp/experiments/MNIST/{}"
-    exp = "May28_03-15-04_Daniels-MacBook-Pro-4.local"
+    root_experiment_folder = "/Users/daniellengyel/flat_sharp/flat_sharp/experiments/CIFAR10/{}"
+    exp = "Jun17_18-59-59_Daniels-MacBook-Pro-4.local"
     experiment_folder = root_experiment_folder.format(exp)
 
     get_runs(experiment_folder , ["Loss", "Kish", "Potential", "Accuracy", "WeightVarTrace", "Norm", "Trace"]) # TODO does not find acc and var
     #
-    # get_final_distances(experiment_folder)
+    # get_exp_final_distances(experiment_folder)
     #
-    get_trace(experiment_folder, -1, False, FCN=True)
-    #
-    get_loss_acc(experiment_folder, -1, FCN=True)
+    get_exp_trace(experiment_folder, -1, False, FCN=False)
 
-    get_grad(experiment_folder, -1, False, FCN=True)
+    get_exp_loss_acc(experiment_folder, -1, FCN=False)
+
+    # get_grad(experiment_folder, -1, False, FCN=True)
 
     # get_dirichlet_energy(experiment_folder, -1, num_steps=20, step_size=0.001, var_noise=0.5, alpha=1, seed=1, FCN=True)
-    # get_tsne(experiment_folder, -1)
+    # get_exp_tsne(experiment_folder, -1)
 
 
 if __name__ == "__main__":

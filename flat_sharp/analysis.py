@@ -13,15 +13,18 @@ from utils import *
 import re
 
 from postprocessing import *
+from lineages import *
 
 import itertools
 
 
-def get_end_stats(stuff):
+def get_end_stats(exp_dict):
+    stuff = exp_dict["stuff"]
     stats_dict = {}
 
     if "runs" in stuff:
         runs = stuff["runs"]
+
     else:
         runs = None
 
@@ -51,7 +54,7 @@ def get_end_stats(stuff):
         num_nets = configs.loc[exp_id]["num_nets"]
         if runs is not None:
             try:
-                num_steps = max(runs[exp_id], key=lambda x: int(x))
+                num_steps = max(runs[exp_id], key=lambda x: int(x)) - 1
             except:
                 continue
 
@@ -59,7 +62,7 @@ def get_end_stats(stuff):
             stats_dict[str(exp_id)] = {}
 
             if loss is None:
-                Loss_test_list = [runs[exp_id][num_steps]["Loss"]["train"]["net"][str(nn)] for nn in range(num_nets)]
+                Loss_train_list = [runs[exp_id][num_steps]["Loss"]["train"]["net"][str(nn)] for nn in range(num_nets)]
             else:
                 Loss_train_list = [loss[exp_id][str(nn)][0] for nn in range(num_nets)]
                 Loss_test_list = [loss[exp_id][str(nn)][1] for nn in range(num_nets)]
@@ -89,6 +92,23 @@ def get_end_stats(stuff):
             if accs is not None:
                 stats_dict[str(exp_id)]["Gap Mean"] = stats_dict[str(exp_id)]["Acc Test Mean"] - \
                                                       stats_dict[str(exp_id)]["Acc Train Mean"]
+
+            if ("runs" in stuff) and ("resampling_idxs" in exp_dict):
+                # get mean total path weigth
+                Y_axis_name = "Potential/curr"
+
+                x_vals, y_vals = get_runs_arr(exp_dict, Y_axis_name, exp_ids=[exp_id], is_mean=False)
+
+                try:
+                    sampling_arr = exp_dict["resampling_idxs"][exp_id]
+                    resampling_arr = np.array([sampling_arr[str(i)] for i in range(len(sampling_arr))])[1:-1]
+
+                    curr_lineage, curr_assignments = find_lineages(resampling_arr)
+                    Ys = get_linages_vals(curr_lineage, y_vals[0])
+                except:
+                    Ys = y_vals[0].T
+                    print("Did not use lineages for {}".format(exp_id))
+                stats_dict[str(exp_id)]["Path Weight Sum"] = np.mean(np.sum(Ys, axis=1))
 
         except:
             print("Error: No stats for {}".format(exp_id))
@@ -135,16 +155,23 @@ def get_end_stats(stuff):
     return stats_pd
 
 
-def _plot(plots, plots_names, X_axis_name, Y_axis_name, X_axis_bounds, Y_axis_bounds, save_location=None):
-    plt.legend(tuple(plots),
-               plots_names,
-               scatterpoints=1,
-               loc='best',
-               ncol=3,
-               fontsize=8)
+def _plot(plots, plots_names, X_axis_name, Y_axis_name, X_axis_bounds, Y_axis_bounds, X_axis_display_name=None, Y_axis_display_name=None, save_location=None):
+    if len(plots_names) > 1:
+        plt.legend(tuple(plots),
+                   plots_names,
+                   scatterpoints=1,
+                   loc='best',
+                   ncol=3,
+                   fontsize=8)
 
-    plt.xlabel(X_axis_name)
-    plt.ylabel(Y_axis_name)
+    if X_axis_display_name is None:
+        X_axis_display_name = X_axis_name
+    if Y_axis_display_name is None:
+        Y_axis_display_name = Y_axis_name
+
+    plt.xlabel(X_axis_display_name)
+    plt.ylabel(Y_axis_display_name)
+
     if X_axis_bounds is not None:
         plt.xlim(X_axis_bounds)
     if Y_axis_bounds is not None:
@@ -154,8 +181,8 @@ def _plot(plots, plots_names, X_axis_name, Y_axis_name, X_axis_bounds, Y_axis_bo
     plt.show()
 
 
-def plot_stats(stats_pd, X_axis_name, Y_axis_name, filter_seperate=None, filter_not_seperate=None, X_axis_bounds=None,
-               Y_axis_bounds=None):
+def plot_stats(stats_pd, X_axis_name, Y_axis_name, filter_seperate=None, filter_not_seperate=None, save_exp_path=None, X_axis_bounds=None,
+               Y_axis_bounds=None, X_axis_display_name=None, Y_axis_display_name=None):
     plots = []
     plots_names = []
 
@@ -165,7 +192,15 @@ def plot_stats(stats_pd, X_axis_name, Y_axis_name, filter_seperate=None, filter_
 
         plots.append(plt.scatter(x_values, y_values))
         plots_names.append("Plot all")
-        _plot(plots, plots_names, X_axis_name, Y_axis_name, X_axis_bounds, Y_axis_bounds)
+        if save_exp_path is not None:
+            save_location = os.path.join(save_exp_path,
+                                         "{}_{}_{}.png".format(X_axis_name, Y_axis_name.replace("/", "-"), str("all")))
+        else:
+            save_location = None
+
+        _plot(plots, plots_names, X_axis_name, Y_axis_name, X_axis_bounds, Y_axis_bounds,
+              X_axis_display_name=X_axis_display_name, Y_axis_display_name=Y_axis_display_name,
+              save_location=save_location)
     else:
         if (("lr_bs_ratio" in filter_seperate) or ("lr_bs_ratio" in filter_not_seperate)) or (
                 X_axis_name == "lr_bs_ratio") or (
@@ -196,50 +231,58 @@ def plot_stats(stats_pd, X_axis_name, Y_axis_name, filter_seperate=None, filter_
                 plots.append(plt.scatter(x_values, y_values))
                 plots_names.append(comb)
 
-            _plot(plots, plots_names, X_axis_name, Y_axis_name, X_axis_bounds, Y_axis_bounds)
+            if save_exp_path is not None:
+                save_location = os.path.join(save_exp_path, "{}_{}_{}.png".format(X_axis_name, Y_axis_name.replace("/", "-"), str(s_comb)))
+            else:
+                save_location = None
+
+            _plot(plots, plots_names, X_axis_name, Y_axis_name, X_axis_bounds, Y_axis_bounds,
+                    X_axis_display_name=X_axis_display_name, Y_axis_display_name=Y_axis_display_name, save_location=save_location)
+
             plots = []
             plots_names = []
 
 
 
-def get_runs_plots_seperate(exp_dict, var_name="Kish", running_average_gamma=0.2):
+# def get_runs_plots_seperate(exp_dict, var_name="Kish", running_average_gamma=0.2):
+#     exp_runs = exp_dict["stuff"]["runs"]
+#     for i in exp_runs:
+#
+#         plot_list = [0]
+#
+#         print(i)
+#
+#         for step in sorted(exp_runs[i], key=lambda x: int(x)):
+#             # try:
+#             # going down the tree with node names given by var_name.split("/")
+#             curr_dict = exp_runs[i][step]
+#             var_name_split = var_name.split("/")
+#             for n in var_name_split:
+#                 curr_dict = curr_dict[n]
+#
+#             if "net" in curr_dict:
+#                 num_nets = int(max(curr_dict["net"], key=lambda x: int(x))) + 1  # +1 bc zero indexed
+#                 to_append = np.array([curr_dict["net"][str(nn)] for nn in range(num_nets)])
+#
+#             else:
+#                 to_append = curr_dict[""]
+#             to_append = plot_list[-1] * (1 - running_average_gamma) + running_average_gamma * to_append
+#             plot_list.append(to_append)
+#             # except:
+#             #     print("No {} for step {}".format(var_name, step))
+#         plt.plot(plot_list[1:])
+#         plt.show()
+
+
+def get_runs_arr(exp_dict, var_name="Kish", exp_ids=None, running_average_gamma=1, is_mean=False):
     exp_runs = exp_dict["stuff"]["runs"]
-    for i in exp_runs:
-
-        plot_list = [0]
-
-        print(i)
-
-        for step in sorted(exp_runs[i], key=lambda x: int(x)):
-            # try:
-            # going down the tree with node names given by var_name.split("/")
-            curr_dict = exp_runs[i][step]
-            var_name_split = var_name.split("/")
-            for n in var_name_split:
-                curr_dict = curr_dict[n]
-
-            if "net" in curr_dict:
-                num_nets = int(max(curr_dict["net"], key=lambda x: int(x))) + 1  # +1 bc zero indexed
-                to_append = np.array([curr_dict["net"][str(nn)] for nn in range(num_nets)])
-
-            else:
-                to_append = curr_dict[""]
-            to_append = plot_list[-1] * (1 - running_average_gamma) + running_average_gamma * to_append
-            plot_list.append(to_append)
-            # except:
-            #     print("No {} for step {}".format(var_name, step))
-        plt.plot(plot_list[1:])
-        plt.show()
-
-
-def get_runs_plots(exp_dict, var_name="Kish", exp_ids=None, running_average_gamma=1):
-    exp_runs = exp_dict["stuff"]["runs"]
-    all_plot_arrs = []
+    all_arrs = []
     val_steps = []
 
     for i in exp_runs:
 
-        plot_arr = None
+        curr_arr = None
+        curr_val_steps = None
         if (exp_ids is not None) and (i not in exp_ids):
             continue
 
@@ -253,27 +296,31 @@ def get_runs_plots(exp_dict, var_name="Kish", exp_ids=None, running_average_gamm
                     curr_dict = curr_dict[n]
                 if "net" in curr_dict:
                     num_nets = int(max(curr_dict["net"], key=lambda x: int(x))) + 1  # +1 bc zero indexed
+
                     to_append = np.array([[curr_dict["net"][str(nn)] for nn in range(num_nets)]])
-                    # to_append = np.mean(to_append).reshape(1, -1)
-
+                    if is_mean:
+                        to_append = np.mean(to_append).reshape(1, -1)
                 else:
-                    to_append = curr_dict[""]
+                    to_append = np.array([curr_dict[""]])
 
-                if plot_arr is None:
-                    plot_arr = to_append
+                if curr_arr is None:
+                    curr_arr = to_append
                 else:
+                    to_append = curr_arr[-1] * (1 - running_average_gamma) + running_average_gamma * to_append
+                    curr_arr = np.concatenate((curr_arr, to_append), axis=0)
 
-                    to_append = plot_arr[-1] * (1 - running_average_gamma) + running_average_gamma * to_append
-                    plot_arr = np.concatenate((plot_arr, to_append), axis=0)
-
-                val_steps.append(step)
+                if curr_val_steps is None:
+                    curr_val_steps = [step]
+                else:
+                    curr_val_steps.append(step)
             except:
                 pass
                 # print("No {} for step {}".format(var_name, step))
 
-        all_plot_arrs.append(plot_arr)
+        all_arrs.append(curr_arr)
+        val_steps.append(curr_val_steps)
 
-    return val_steps, all_plot_arrs
+    return val_steps, np.array(all_arrs)
 
 def get_stat_step(exp_dict, var_name, step, exp_ids=None):
     if var_name == "trace":
@@ -413,7 +460,8 @@ def get_plot_special(exp_dict, exp_ids, X_axis_name, Y_axis_name):
 
 
 def plot_special(exp_dict, X_axis_name, Y_axis_name, filter_seperate=None, filter_not_seperate=None,
-                 save_exp_path=None, X_axis_bounds=None, Y_axis_bounds=None, pre_filtered_exp_ids=None):
+                 save_exp_path=None, X_axis_bounds=None, Y_axis_bounds=None, pre_filtered_exp_ids=None, is_mean=False,
+                 X_axis_display_name=None, Y_axis_display_name=None):
     plots = []
     plots_names = []
 
@@ -423,7 +471,15 @@ def plot_special(exp_dict, X_axis_name, Y_axis_name, filter_seperate=None, filte
         x_vals, y_vals = get_plot_special(exp_dict, list(cfs.index), X_axis_name, Y_axis_name)
         plots.append(plt.scatter(x_vals, y_vals))
         plots_names.append("Plot all")
-        _plot(plots, plots_names, X_axis_name, Y_axis_name, X_axis_bounds=X_axis_bounds, Y_axis_bounds=Y_axis_bounds)
+        if save_exp_path is not None:
+            save_location = os.path.join(save_exp_path,
+                                         "{}_{}_{}.png".format(X_axis_name, Y_axis_name.replace("/", "-"), str("all")))
+        else:
+            save_location = None
+
+        _plot(plots, plots_names, X_axis_name, Y_axis_name, X_axis_bounds, Y_axis_bounds,
+              X_axis_display_name=X_axis_display_name, Y_axis_display_name=Y_axis_display_name,
+              save_location=save_location)
     else:
         if filter_seperate is None:
             filter_seperate = []
@@ -450,9 +506,10 @@ def plot_special(exp_dict, X_axis_name, Y_axis_name, filter_seperate=None, filte
                     continue
 
                 if X_axis_name == "time":
-                    x_vals, y_vals = get_runs_plots(exp_dict, Y_axis_name, exp_ids)
+                    x_vals, y_vals = get_runs_arr(exp_dict, Y_axis_name, exp_ids, is_mean=False)
 
-                    plots.append(plt.plot(x_vals, y_vals[0])[0])
+                    y_vals = get_exp_lineages(exp_dict, x_vals, y_vals, exp_ids, is_mean=is_mean)
+                    plots.append(plt.plot(x_vals[0], y_vals[0])[0])
 
                 else:
                     x_vals, y_vals = get_plot_special(exp_dict, exp_ids, X_axis_name, Y_axis_name)
@@ -463,10 +520,12 @@ def plot_special(exp_dict, X_axis_name, Y_axis_name, filter_seperate=None, filte
                     plots.append(plt.scatter(x_vals, y_vals))
                 plots_names.append(comb)
             if save_exp_path is not None:
-                _plot(plots, plots_names, X_axis_name, Y_axis_name, X_axis_bounds, Y_axis_bounds,
-                      os.path.join(save_exp_path, "{}_{}_{}.png".format(X_axis_name, Y_axis_name.replace("/", "-"), str(s_comb))))
-
+                save_location = os.path.join(save_exp_path, "{}_{}_{}.png".format(X_axis_name, Y_axis_name.replace("/", "-"), str(s_comb)))
             else:
-                _plot(plots, plots_names, X_axis_name, Y_axis_name, X_axis_bounds, Y_axis_bounds)
+                save_location = None
+
+            _plot(plots, plots_names, X_axis_name, Y_axis_name, X_axis_bounds, Y_axis_bounds,
+                    X_axis_display_name=X_axis_display_name, Y_axis_display_name=Y_axis_display_name, save_location=save_location)
+
             plots = []
             plots_names = []

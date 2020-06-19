@@ -5,7 +5,7 @@ from torch.utils.data import DataLoader
 import torch.optim as optim
 
 import datetime
-import socket, sys, os
+import socket, sys, os, copy
 
 from collections import defaultdict
 from tensorflow.python.summary.summary_iterator import summary_iterator
@@ -75,6 +75,20 @@ def get_grad_params_vec(net):
     return param_vec
 
 
+def vec_to_net(vec, net):
+    new_net = copy.deepcopy(net)
+
+    dict_new_net = dict(new_net.named_parameters())
+
+    start_point = 0
+    for name1, param1 in net.named_parameters():
+        end_point = start_point + param1.numel()
+        dict_new_net[name1].data.copy_(vec[start_point:end_point].reshape(param1.shape))
+
+        start_point = end_point
+
+    return new_net
+
 def torch_cov(m):
     m_exp = torch.mean(m, dim=1)
     x = m - m_exp[:, None]
@@ -107,7 +121,7 @@ def get_params_cov(nets):
 def get_correlation(X, Y):
     return (X - np.mean(X)).dot(Y - np.mean(Y)) / np.sqrt(np.var(X) * np.var(Y)) * 1 / float(len(Y))
 
-def get_nets(config):
+def get_nets(config, device=None):
     num_nets = config["num_nets"]
     if config["net_name"] == "SimpleNet":
         nets = [SimpleNet(*config["net_params"]) for _ in range(num_nets)]
@@ -115,8 +129,10 @@ def get_nets(config):
         nets = [LeNet(*config["net_params"]) for _ in range(num_nets)]
     else:
         raise NotImplementedError("{} is not implemented.".format(config["net_name"]))
-
+    if device is not None:
+        nets = [net.to(device) for net in nets]
     return nets
+
 def get_optimizers(config):
     def helper(nets, optimizers=None):
         num_nets = config["num_nets"]
@@ -305,33 +321,4 @@ def unbiased_weight_estimate(net, data, criterion, num_samples=3, batch_size=500
     return np.mean(weights)
 
 
-def sampling_plot_arr(values_arr, resampling_arr):
-    x_vals = []
-    y_vals = []
-
-    for p in range(len(values_arr)):
-        last_resampling = 0
-        already_added = False
-
-        for t in range(len(values_arr[p])):
-            if resampling_arr[t][p] != p:
-                if (last_resampling == 0) and (not already_added):
-                    x_vals.append(list(range(last_resampling, t + 1)))
-                    y_vals.append(values_arr[p][last_resampling:t + 1])
-                    already_added = True
-                else:
-                    starts_at = values_arr[resampling_arr[last_resampling][p]][last_resampling]
-                    x_vals.append(list(range(last_resampling, t + 1)))
-                    y_vals.append([starts_at] + values_arr[p][last_resampling + 1:t + 1])
-
-                last_resampling = t
-
-        if (last_resampling == 0):
-            x_vals.append(list(range(last_resampling, t + 1)))
-            y_vals.append(values_arr[p][last_resampling:t + 1])
-        else:
-            starts_at = values_arr[resampling_arr[last_resampling][p]][last_resampling]
-            x_vals.append(list(range(last_resampling, t + 1)))
-            y_vals.append([starts_at] + values_arr[p][last_resampling + 1:t + 1])
-    return x_vals, y_vals
 

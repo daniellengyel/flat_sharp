@@ -17,7 +17,7 @@ config = {}
 # setting hyperparameters
 
 # data specific
-data_name = "MNIST"
+data_name = "CIFAR10"
 
 if data_name == "CIFAR10":
     num_channels = 3
@@ -32,6 +32,9 @@ elif (data_name == "MNIST") or (data_name == "FashionMNIST"):
     out_dim = 10
     inp_dim = height * width * num_channels
 elif data_name == "gaussian":
+    inp_dim = 2
+    out_dim = 2
+elif data_name == "mis_gauss":
     inp_dim = 2
     out_dim = 2
 
@@ -50,22 +53,21 @@ config["torch_random_seed"] = 1
 config["num_steps"] = 6000  # tune.grid_search([25000]) # roughly 50 * 500 / 16
 config["mean_loss_threshold"] = None # 0.15
 
-config["batch_train_size"] = 128 # tune.grid_search([8, 32, 256])
-config["batch_test_size"] = tune.grid_search([32])
+config["batch_train_size"] = 32 # tune.grid_search([ 32, 256])
+config["batch_test_size"] = tune.grid_search([16])
 
 config["ess_threshold"] = None  # tune.grid_search([0.97])
-config["sampling_tau"] = 1  # tune.grid_search([1, 5]) # tune.grid_search([1, 25, 100])
+config["sampling_tau"] = 1 # tune.grid_search([1, 5]) # tune.grid_search([1, 25, 100])
 config["sampling_wait"] = 0
 config["sampling_stop"] = None
 
-
-config["learning_rate"] = 0.3 # tune.grid_search([0.25, 0.075])  # tune.grid_search(list(np.logspace(-6, -2, 10))) # 1 # tune.grid_search(list(np.logspace(-2, 1, 10)))
+config["learning_rate"] = tune.grid_search([0.1]) # 1 # tune.grid_search(list(np.logspace(-2, 1, 10)))
 # config["lr_decay"] =
 config["momentum"] = 0
 
-config["num_nets"] = 100  # would like to make it like other one, where we can define region to initialize
+config["num_nets"] = 20  # would like to make it like other one, where we can define region to initialize
 
-config["softmax_beta"] = -30 # tune.grid_search([0, 1, -1, 100, -100, 500, -500]) # e.g. negtive to prioritize low weights
+config["softmax_beta"] = tune.grid_search([0] + list(-1*np.linspace(1, 100, 5)) + list(np.linspace(1, 100, 5))) # e.g. negtive to prioritize low weights
 # offset = tune.grid_search([0.5, 0.25, 0.1])
 config["softmax_adaptive"] = None  # [offset, 1000] # offset, and strength
 
@@ -88,7 +90,7 @@ os.makedirs(folder_path)
 # --- get data ---
 train_data, test_data = get_data(data_name, vectorized=config["net_name"] == "SimpleNet",
                                  reduce_train_per=config["reduce_train_per"])
-if data_name == "gaussian":
+if (data_name == "gaussian") or (data_name == "mis_gauss"):
     # Store the data in our folder as data.pkl
     with open(os.path.join(folder_path, "data.pkl"), "wb") as f:
         pickle.dump((train_data, test_data), f)

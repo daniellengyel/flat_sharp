@@ -7,7 +7,6 @@ import torch.optim as optim
 
 from pyhessian import hessian
 
-
 from torch.utils.tensorboard import SummaryWriter
 
 from utils import *
@@ -21,7 +20,7 @@ import os, time
 def train(config, folder_path, train_data, test_data):
     # init torch
     if config["device"] == "gpu":
-        torch.backends.cudnn.enabled = False
+        torch.backends.cudnn.enabled = True
         device = torch.device("cuda:0")
     else:
         device = torch.device("cpu")
@@ -34,9 +33,8 @@ def train(config, folder_path, train_data, test_data):
     train_loader = DataLoader(train_data, batch_size=config["batch_train_size"], shuffle=True)
     test_loader = DataLoader(test_data, batch_size=config["batch_test_size"], shuffle=True)
 
-
     # Init neural nets and weights
-    nets = get_nets(config)
+    nets = get_nets(config, device)
     num_nets = config["num_nets"]
     nets_weights = np.zeros(num_nets)
     num_steps = config["num_steps"]
@@ -64,7 +62,8 @@ def train(config, folder_path, train_data, test_data):
     if ess_threshold is not None:
         should_resample = lambda w, s: (kish_effs(w) < ess_threshold) and (beta != 0) and (s >= sampling_wait)
     elif sampling_tau is not None:
-        should_resample = lambda w, s: (s % sampling_tau == 0) and (s > 0) and (s >= sampling_wait) and (beta != 0) and (s < sampling_stop)
+        should_resample = lambda w, s: (s % sampling_tau == 0) and (s > 0) and (s >= sampling_wait) and (
+                    beta != 0) and (s < sampling_stop)
     else:
         should_resample = lambda w, s: False
 
@@ -111,10 +110,13 @@ def train(config, folder_path, train_data, test_data):
             if (curr_step % 100) == 1:
                 print("Step: {}".format(curr_step))
                 print("Mean Loss: {}".format(mean_loss))
-                # print("Mean Sampling Weights: {}".format(np.mean(nets_weights)))
+                print("Mean Sampling Weights: {}".format(np.mean(nets_weights)))
 
             # do update step for each net
-            nets, nets_weights, took_step, mean_loss_after_step = _training_step(nets, nets_weights, optimizers, net_data_loaders, criterion, weight_type, curr_step=curr_step, writer=writer)
+            nets, nets_weights, took_step, mean_loss_after_step = _training_step(nets, nets_weights, optimizers,
+                                                                                 net_data_loaders, criterion,
+                                                                                 weight_type, curr_step=curr_step,
+                                                                                 writer=writer, device=device)
 
             # if is_training_curr is returned false by _training_step it means we didn't take a step
             if not took_step:
@@ -129,6 +131,9 @@ def train(config, folder_path, train_data, test_data):
             writer.add_scalar('WeightVarTrace/', torch.norm(covs), curr_step)
 
             # Check resample
+            if sampling_wait == curr_step:
+                nets_weights = np.zeros(num_nets)
+
             if should_resample(nets_weights, curr_step):
 
                 # save nets
@@ -142,7 +147,7 @@ def train(config, folder_path, train_data, test_data):
                 # resample particles
                 if softmax_adaptive is not None:
                     offset, strength = softmax_adaptive
-                    strength *= np.mean(mean_loss) - offset # TODO change so we can iterate over methods
+                    strength *= np.mean(mean_loss) - offset  # TODO change so we can iterate over methods
                     print(strength)
                     sampled_idx = sample_index_softmax(nets_weights, nets, beta=strength)
                     nets = [copy.deepcopy(nets[i]) for i in sampled_idx]
@@ -161,7 +166,8 @@ def train(config, folder_path, train_data, test_data):
                 nets_weights = np.zeros(num_nets)
 
                 # save the resample indecies
-                with open(os.path.join(folder_path, "resampling", file_stamp, "step_{}".format(curr_step), "sampled_idx.pkl"), "wb") as f:
+                with open(os.path.join(folder_path, "resampling", file_stamp, "step_{}".format(curr_step),
+                                       "sampled_idx.pkl"), "wb") as f:
                     pickle.dump(sampled_idx, f)
 
                 is_training_curr = False
@@ -188,7 +194,8 @@ def train(config, folder_path, train_data, test_data):
     return nets
 
 
-def _training_step(nets, nets_weights, net_optimizers, net_data_loaders, criterion, weight_type, var_noise=None, curr_step=0, writer=None):
+def _training_step(nets, nets_weights, net_optimizers, net_data_loaders, criterion, weight_type, var_noise=None,
+                   curr_step=0, writer=None, device=None):
     """Does update step on all networks and computes the weights.
     If wanting to do a random walk, set learning rate of net_optimizer to zero and set var_noise to noise level."""
     taking_step = True
@@ -208,6 +215,8 @@ def _training_step(nets, nets_weights, net_optimizers, net_data_loaders, criteri
             taking_step = False
             break
         inputs, labels = data
+        if device is not None:
+            inputs, labels = inputs.to(device), labels.to(device).type(torch.cuda.FloatTensor)
 
         # Compute gradients for input.
         inputs.requires_grad = True
@@ -264,5 +273,4 @@ def _training_step(nets, nets_weights, net_optimizers, net_data_loaders, criteri
 
     assert taking_step or (idx_net == 0)
 
-    return nets, nets_weights, taking_step, mean_loss/len(nets)
-
+    return nets, nets_weights, taking_step, mean_loss / len(nets)
