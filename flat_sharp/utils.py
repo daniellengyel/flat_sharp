@@ -252,7 +252,7 @@ def get_average_output(nets, inp):
 
 def get_net_accuracy(net, data_loader, full_dataset=False, device=None):
     correct = 0
-    _sum = 0
+    total = 0
 
     for idx, (inputs, labels) in enumerate(data_loader):
         if device is not None:
@@ -261,15 +261,14 @@ def get_net_accuracy(net, data_loader, full_dataset=False, device=None):
         else:
             inputs = inputs.float()
 
-        predict_y = net(inputs).detach()
-        predict_ys = np.argmax(predict_y, axis=-1)
-        label_np = labels.numpy()
-        _ = predict_ys == labels
-        correct += np.sum(_.numpy(), axis=-1)
-        _sum += _.shape[0]
+        outputs = net(inputs)
+        _, predicted = torch.max(outputs, 1)
+        total += labels.size(0)
+        correct += (predicted == labels).sum().item()
+
         if not full_dataset:
             break
-    return correct / float(_sum)
+    return correct / float(total)
 
 
 def get_net_loss(net, data_loader, full_dataset=False):
