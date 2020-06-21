@@ -262,9 +262,9 @@ def get_net_accuracy(net, data_loader, full_dataset=False, device=None):
             inputs = inputs.float()
 
         predict_y = net(inputs).detach()
-        predict_ys = np.argmax(labels, axis=-1)
-        label_np = test_label.numpy()
-        _ = predict_ys == test_label
+        predict_ys = np.argmax(predict_y, axis=-1)
+        label_np = labels.numpy()
+        _ = predict_ys == labels
         correct += np.sum(_.numpy(), axis=-1)
         _sum += _.shape[0]
         if not full_dataset:
