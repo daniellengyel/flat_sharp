@@ -581,9 +581,10 @@ def main(experiment_name):
     # names = ["Loss", "Potential", "Accuracy", "Kish"]
     # run_data = get_runs(experiment_folder, names)
 
-    root_experiment_folder = "/Users/daniellengyel/flat_sharp/flat_sharp/experiments/CIFAR10/{}"
+    root_folder = os.environ["PATH_TO_FLAT_FOLDER"]
+    data_name = "CIFAR10"
     exp = "SimpleNet_good"
-    experiment_folder = root_experiment_folder.format(exp)
+    experiment_folder = os.path.join(root_folder, "experiments", data_name, exp)
 
     get_runs(experiment_folder, ["Loss", "Kish", "Potential", "Accuracy", "WeightVarTrace", "Norm",
                                  "Trace"])  # TODO does not find acc and var
