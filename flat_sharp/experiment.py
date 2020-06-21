@@ -73,7 +73,7 @@ config["softmax_adaptive"] = None  # [offset, 1000] # offset, and strength
 
 config["weight_type"] = "loss_gradient_weights"  # "input_output_forbenius", #
 
-config["device"] = "cpu"
+config["device"] = "gpu"
 
 if data_name == "MNIST":
     config["reduce_train_per"] = 0.1

@@ -178,7 +178,7 @@ def train(config, folder_path, train_data, test_data):
 
         # get test error
         for idx_net in range(num_nets):
-            accuracy = get_net_accuracy(nets[idx_net], test_loader)
+            accuracy = get_net_accuracy(nets[idx_net], test_loader, device=device)
             writer.add_scalar('Accuracy/net_{}'.format(idx_net), accuracy, curr_step)
 
     # save final nets
