@@ -96,9 +96,12 @@ if (data_name == "gaussian") or (data_name == "mis_gauss"):
         pickle.dump((train_data, test_data), f)
 
 a = time.time()
-train(config, folder_path, train_data, test_data)
-# tune.run(lambda config_inp: train(config_inp, folder_path, train_data, test_data), config=config)
-# train(config, folder_path)
+# train(config, folder_path, train_data, test_data)
+if config["gpu"]:
+    tune.run(lambda config_inp: train(config_inp, folder_path, train_data, test_data), config=config, resources_per_trial={'gpu': 1})
+else:
+    tune.run(lambda config_inp: train(config_inp, folder_path, train_data, test_data), config=config)
+
 print(time.time() - a)
 
 
