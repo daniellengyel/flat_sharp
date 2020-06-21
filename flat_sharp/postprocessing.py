@@ -209,7 +209,7 @@ def get_exp_eig(experiment_folder, step, num_eigenthings=5, use_gpu=False, FCN=F
     return eigenvalue_dict
 
 
-def get_models_trace(models, data_loader, criterion, full_dataset=False, verbose=False, device=device):
+def get_models_trace(models, data_loader, criterion, full_dataset=False, verbose=False, device=None):
     trace_dict = {}
 
     hessian_dataloader = []
@@ -582,7 +582,7 @@ def main(experiment_name):
     # run_data = get_runs(experiment_folder, names)
 
     root_experiment_folder = "/Users/daniellengyel/flat_sharp/flat_sharp/experiments/CIFAR10/{}"
-    exp = "Jun17_18-59-59_Daniels-MacBook-Pro-4.local"
+    exp = "SimpleNet_good"
     experiment_folder = root_experiment_folder.format(exp)
 
     get_runs(experiment_folder, ["Loss", "Kish", "Potential", "Accuracy", "WeightVarTrace", "Norm",
@@ -590,7 +590,7 @@ def main(experiment_name):
 
 
     # init torch
-    is_gpu = False
+    is_gpu = True
     if is_gpu:
         torch.backends.cudnn.enabled = True
         device = torch.device("cuda:0")
