@@ -64,7 +64,7 @@ def train(config, folder_path, train_data, test_data):
         should_resample = lambda w, s: (kish_effs(w) < ess_threshold) and (beta != 0) and (s >= sampling_wait)
     elif sampling_tau is not None:
         should_resample = lambda w, s: (s % sampling_tau == 0) and (s > 0) and (s >= sampling_wait) and (
-                    beta != 0) and (s < sampling_stop)
+                beta != 0) and (s < sampling_stop)
     else:
         should_resample = lambda w, s: False
 
@@ -217,7 +217,8 @@ def _training_step(nets, nets_weights, net_optimizers, net_data_loaders, criteri
             break
         inputs, labels = data
         if device is not None:
-            inputs, labels = inputs.to(device), labels.to(device).type(torch.cuda.FloatTensor)
+            inputs, labels = inputs.to(device).type(torch.cuda.FloatTensor), labels.to(device).type(
+                torch.cuda.LongTensor)
 
         # Compute gradients for input.
         inputs.requires_grad = True
@@ -227,7 +228,7 @@ def _training_step(nets, nets_weights, net_optimizers, net_data_loaders, criteri
 
         # forward + backward + optimize
         outputs = net(inputs)
-        loss = criterion(outputs.float(), labels)
+        loss = criterion(outputs, labels)
         loss.backward(retain_graph=True)
         optimizer.step()
 
@@ -238,7 +239,7 @@ def _training_step(nets, nets_weights, net_optimizers, net_data_loaders, criteri
 
         # update weights
         if weight_type == "input_output_forbenius":
-            # zero the parameter gradients
+            # zero the parameter
             optimizer.zero_grad()
 
             # get input gradients
@@ -267,7 +268,7 @@ def _training_step(nets, nets_weights, net_optimizers, net_data_loaders, criteri
             if (curr_step % 50) == 0:
                 # a = time.time()
                 is_gpu = device is not None
-                trace = np.mean(hessian(net, criterion, data=(inputs, labels), cuda=False).trace())
+                trace = np.mean(hessian(net, criterion, data=(inputs, labels), cuda=is_gpu).trace())
                 writer.add_scalar('Trace/net_{}'.format(idx_net), trace, curr_step)
                 # print("Getting trace took {}".format(time.time() - a))
 

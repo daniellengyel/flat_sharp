@@ -254,9 +254,15 @@ def get_net_accuracy(net, data_loader, full_dataset=False, device=None):
     correct = 0
     _sum = 0
 
-    for idx, (test_x, test_label) in enumerate(data_loader):
-        predict_y = net(test_x.float()).detach()
-        predict_ys = np.argmax(predict_y, axis=-1)
+    for idx, (inputs, labels) in enumerate(data_loader):
+        if device is not None:
+            inputs, labels = inputs.to(device).type(torch.cuda.FloatTensor), labels.to(device).type(
+                torch.cuda.LongTensor)
+        else:
+            inputs = inputs.float()
+
+        predict_y = net(inputs).detach()
+        predict_ys = np.argmax(labels, axis=-1)
         label_np = test_label.numpy()
         _ = predict_ys == test_label
         correct += np.sum(_.numpy(), axis=-1)
