@@ -97,7 +97,7 @@ if (data_name == "gaussian") or (data_name == "mis_gauss"):
 
 a = time.time()
 # train(config, folder_path, train_data, test_data)
-if config["gpu"]:
+if config["device"] == "gpu":
     tune.run(lambda config_inp: train(config_inp, folder_path, train_data, test_data), config=config, resources_per_trial={'gpu': 1})
 else:
     tune.run(lambda config_inp: train(config_inp, folder_path, train_data, test_data), config=config)
