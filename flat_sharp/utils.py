@@ -250,7 +250,7 @@ def get_average_output(nets, inp):
     return np.mean(outs, axis=0)
 
 
-def get_net_accuracy(net, data_loader, full_dataset=False):
+def get_net_accuracy(net, data_loader, full_dataset=False, device=None):
     correct = 0
     _sum = 0
 

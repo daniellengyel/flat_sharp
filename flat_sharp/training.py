@@ -23,7 +23,8 @@ def train(config, folder_path, train_data, test_data):
         torch.backends.cudnn.enabled = True
         device = torch.device("cuda:0")
     else:
-        device = torch.device("cpu")
+        device = None
+        # device = torch.device("cpu")
 
     if config["torch_random_seed"] is not None:
         torch.manual_seed(config["torch_random_seed"])
@@ -265,6 +266,7 @@ def _training_step(nets, nets_weights, net_optimizers, net_data_loaders, criteri
             writer.add_scalar('Norm/net_{}'.format(idx_net), torch.norm(get_params_vec(net)), curr_step)
             if (curr_step % 50) == 0:
                 # a = time.time()
+                is_gpu = device is not None
                 trace = np.mean(hessian(net, criterion, data=(inputs, labels), cuda=False).trace())
                 writer.add_scalar('Trace/net_{}'.format(idx_net), trace, curr_step)
                 # print("Getting trace took {}".format(time.time() - a))
