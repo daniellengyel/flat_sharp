@@ -271,14 +271,19 @@ def get_net_accuracy(net, data_loader, full_dataset=False, device=None):
     return correct / float(total)
 
 
-def get_net_loss(net, data_loader, full_dataset=False):
+def get_net_loss(net, data_loader, full_dataset=False, device=None):
     criterion = torch.nn.CrossEntropyLoss()
 
     loss_sum = 0
     for idx, (inputs, labels) in enumerate(data_loader):
+        if device is not None:
+            inputs, labels = inputs.to(device).type(torch.cuda.FloatTensor), labels.to(device).type(
+                torch.cuda.LongTensor)
+        else:
+            inputs = inputs.float()
 
         outputs = net(inputs)
-        loss_sum += float(criterion(outputs.float(), labels))
+        loss_sum += float(criterion(outputs, labels))
         if not full_dataset:
             break
 

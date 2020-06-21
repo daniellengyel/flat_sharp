@@ -22,9 +22,11 @@ import torch
 from hessian_eigenthings import compute_hessian_eigenthings
 
 import pickle
+
+
 # +++ process experiment results +++
 def tb_to_dict(path_to_events_file, names):
-    tb_dict = {} # step, breakdown by / and _
+    tb_dict = {}  # step, breakdown by / and _
 
     for e in summary_iterator(path_to_events_file):
         for v in e.summary.value:
@@ -41,6 +43,7 @@ def tb_to_dict(path_to_events_file, names):
                         tmp_dict = tmp_dict[s]
                 tmp_dict[t_split[-1]] = v.simple_value
     return tb_dict
+
 
 def get_models(model_folder_path, step):
     if step == -1:
@@ -66,6 +69,7 @@ def get_models(model_folder_path, step):
 
     return nets_dict
 
+
 def get_all_models(experiment_folder, step):
     models_dict = {}
     # iterate through models
@@ -79,6 +83,7 @@ def get_all_models(experiment_folder, step):
             continue
     return models_dict
 
+
 def _get_sample_idxs(model_folder_path):
     sample_idx_dir = {}
     for root, dirs, files in os.walk(model_folder_path, topdown=False):
@@ -89,6 +94,7 @@ def _get_sample_idxs(model_folder_path):
             with open(os.path.join(model_folder_path, sample_step_dir, "sampled_idx.pkl"), "rb") as f:
                 sample_idx_dir[name_split_underscore[-1]] = pickle.load(f)
     return sample_idx_dir
+
 
 def get_sample_idxs(experiment_folder):
     # init
@@ -121,6 +127,7 @@ def get_runs(experiment_folder, names):
 
     return run_dir
 
+
 def get_configs(experiment_folder):
     config_dir = {}
     for root, dirs, files in os.walk("{}/runs".format(experiment_folder), topdown=False):
@@ -131,10 +138,12 @@ def get_configs(experiment_folder):
             config = yaml.load(f)
         config_dir[curr_dir] = config
         config_dir[curr_dir]["net_params"] = tuple(config_dir[curr_dir]["net_params"])
-        if ("softmax_adaptive" in config_dir[curr_dir]) and (isinstance(config_dir[curr_dir]["softmax_adaptive"], list)):
+        if ("softmax_adaptive" in config_dir[curr_dir]) and (
+        isinstance(config_dir[curr_dir]["softmax_adaptive"], list)):
             config_dir[curr_dir]["softmax_adaptive"] = tuple(config_dir[curr_dir]["softmax_adaptive"])
 
     return pd.DataFrame(config_dir).T
+
 
 def get_postprocessing_data(experiment_folder, vectorized=True):
     data_type = experiment_folder.split("/")[-2]
@@ -151,6 +160,7 @@ def get_postprocessing_data(experiment_folder, vectorized=True):
     else:
         raise NotImplementedError("{} data type is not implemented.".format(data_type))
 
+
 # get eigenvalues of specific model folder.
 def get_models_eig(models, train_loader, test_loader, loss, num_eigenthings=5, use_gpu=False, full_dataset=True):
     eig_dict = {}
@@ -162,14 +172,15 @@ def get_models_eig(models, train_loader, test_loader, loss, num_eigenthings=5, u
                                                            full_dataset=full_dataset, mode="lanczos",
                                                            max_steps=100, tol=1e-2)
         try:
-        #     eigenvals, eigenvecs = compute_hessian_eigenthings(m, train_loader,
-        #                                                        loss, num_eigenthings, use_gpu=use_gpu, full_dataset=full_dataset , mode="lanczos",
-        #                                                        max_steps=50)
+            #     eigenvals, eigenvecs = compute_hessian_eigenthings(m, train_loader,
+            #                                                        loss, num_eigenthings, use_gpu=use_gpu, full_dataset=full_dataset , mode="lanczos",
+            #                                                        max_steps=50)
             eig_dict[k] = (eigenvals, eigenvecs)
         except:
             print("Error for net {}.".format(k))
 
     return eig_dict
+
 
 # get eigenvalues of specific model folder.
 def get_exp_eig(experiment_folder, step, num_eigenthings=5, use_gpu=False, FCN=False):
@@ -189,7 +200,8 @@ def get_exp_eig(experiment_folder, step, num_eigenthings=5, use_gpu=False, FCN=F
         root = os.path.join("{}/resampling".format(experiment_folder), curr_dir)
         print(curr_dir)
         models_dict = get_models(root, step)
-        eigenvalue_dict[curr_dir] = get_models_eig(models_dict, train_loader, test_loader, loss, num_eigenthings, use_gpu, full_dataset=True)
+        eigenvalue_dict[curr_dir] = get_models_eig(models_dict, train_loader, test_loader, loss, num_eigenthings,
+                                                   use_gpu, full_dataset=True)
 
         # cache data
         cache_data(experiment_folder, "eig", eigenvalue_dict)
@@ -197,7 +209,7 @@ def get_exp_eig(experiment_folder, step, num_eigenthings=5, use_gpu=False, FCN=F
     return eigenvalue_dict
 
 
-def get_models_trace(models, data_loader, criterion, full_dataset=False, verbose=False):
+def get_models_trace(models, data_loader, criterion, full_dataset=False, verbose=False, device=device):
     trace_dict = {}
 
     hessian_dataloader = []
@@ -212,17 +224,24 @@ def get_models_trace(models, data_loader, criterion, full_dataset=False, verbose
             print(k)
         a = time.time()
         ts = []
-        if full_dataset:
-            trace = hessian(m, criterion, dataloader=hessian_dataloader, cuda=False).trace()
+
+        if device is not  None:
+            m = m.to(device)
+            is_gpu = True
         else:
-            trace = hessian(m, criterion, data=hessian_dataloader[0], cuda=False).trace()
+            is_gpu = False
+
+        if full_dataset:
+            trace = hessian(m, criterion, dataloader=hessian_dataloader, cuda=is_gpu).trace()
+        else:
+            trace = hessian(m, criterion, data=hessian_dataloader[0], cuda=is_gpu).trace()
 
         trace_dict[k] = trace
 
     return trace_dict
 
 
-def get_exp_trace(experiment_folder, step,  use_gpu=False, FCN=False):
+def get_exp_trace(experiment_folder, step, use_gpu=False, FCN=False, device=None):
     # init
     trace_dict = {}
     criterion = torch.nn.CrossEntropyLoss()
@@ -239,16 +258,17 @@ def get_exp_trace(experiment_folder, step,  use_gpu=False, FCN=False):
         root = os.path.join("{}/resampling".format(experiment_folder), curr_dir)
         print(curr_dir)
         models_dict = get_models(root, step)
-        trace_dict[curr_dir] = get_models_trace(models_dict, train_loader, criterion, full_dataset=False, verbose=True)
+        trace_dict[curr_dir] = get_models_trace(models_dict, train_loader, criterion, full_dataset=False, verbose=True,
+                                                device=device)
 
         # cache data
         cache_data(experiment_folder, "trace", trace_dict)
 
     return trace_dict
 
+
 def get_models_grad(models, data_loader, criterion, full_dataset=True):
     grad_dict = {}
-
 
     # get trace
     for k, m in models.items():
@@ -270,13 +290,12 @@ def get_models_grad(models, data_loader, criterion, full_dataset=True):
             if full_dataset:
                 break
 
-        grad_dict[k] = weight_sum/float(len(data_loader))
-
+        grad_dict[k] = weight_sum / float(len(data_loader))
 
     return grad_dict
 
 
-def get_exp_grad(experiment_folder, step,  use_gpu=False, FCN=False):
+def get_exp_grad(experiment_folder, step, use_gpu=False, FCN=False):
     # init
     grad_dict = {}
     criterion = torch.nn.CrossEntropyLoss()
@@ -301,16 +320,18 @@ def get_exp_grad(experiment_folder, step,  use_gpu=False, FCN=False):
     return grad_dict
 
 
-def get_models_loss_acc(models, train_loader, test_loader):
+def get_models_loss_acc(models, train_loader, test_loader, device=None):
     loss_dict = {}
     acc_dict = {}
 
     for k, m in models.items():
-        loss_dict[k] = (get_net_loss(m, train_loader), get_net_loss(m, test_loader))
-        acc_dict[k] = (get_net_accuracy(m, train_loader), get_net_accuracy(m, test_loader))
+        loss_dict[k] = (get_net_loss(m, train_loader, device=device), get_net_loss(m, test_loader, device=device))
+        acc_dict[k] = (
+        get_net_accuracy(m, train_loader, device=device), get_net_accuracy(m, test_loader, device=device))
     return loss_dict, acc_dict
 
-def get_exp_loss_acc(experiment_folder, step, FCN=False):
+
+def get_exp_loss_acc(experiment_folder, step, FCN=False, device=None):
     print("Get loss acc")
     # init
     loss_dict = {}
@@ -329,7 +350,8 @@ def get_exp_loss_acc(experiment_folder, step, FCN=False):
 
         root = os.path.join("{}/resampling".format(experiment_folder), curr_dir)
         models_dict = get_models(root, step)
-        loss_dict[curr_dir], acc_dict[curr_dir] = get_models_loss_acc(models_dict, train_loader, test_loader)
+        loss_dict[curr_dir], acc_dict[curr_dir] = get_models_loss_acc(models_dict, train_loader, test_loader,
+                                                                      device=device)
 
         # cache data
         cache_data(experiment_folder, "loss", loss_dict)
@@ -339,9 +361,11 @@ def get_exp_loss_acc(experiment_folder, step, FCN=False):
 
 
 def get_models_tsne(models):
-    models_vecs = np.array([get_params_vec(m).detach().numpy() for k, m in sorted(models.items(), key=lambda item: int(item[0]))])
+    models_vecs = np.array(
+        [get_params_vec(m).detach().numpy() for k, m in sorted(models.items(), key=lambda item: int(item[0]))])
     X_embedded = TSNE(n_components=2).fit_transform(models_vecs)
     return X_embedded
+
 
 def get_exp_tsne(experiment_folder, step):
     # init
@@ -362,6 +386,7 @@ def get_exp_tsne(experiment_folder, step):
 
     return tsne_dict
 
+
 def get_models_final_distances(beginning_models, final_models):
     dist_arr = []
     for i in range(len(beginning_models)):
@@ -370,6 +395,7 @@ def get_models_final_distances(beginning_models, final_models):
         dist_arr.append(float(torch.norm(b_vec - f_vec)))
 
     return dist_arr
+
 
 def get_exp_final_distances(experiment_folder):
     # init
@@ -399,10 +425,10 @@ def cache_data(experiment_folder, name, data):
     with open(os.path.join(cache_folder, "{}.pkl".format(name)), "wb") as f:
         pickle.dump(data, f)
 
+
 # def log_msg(experiment_folder, msg):
 #     cache_folder = os.path.join(experiment_folder, "postprocessing", "cache")
 #     os.makedirs(cache_folder)
-
 
 
 def get_config_to_id_map(configs):
@@ -424,6 +450,7 @@ def get_config_to_id_map(configs):
         prev_dict[k][v] = net_id
     return map_dict
 
+
 def get_ids(config_to_id_map, config):
     if not isinstance(config_to_id_map, dict):
         return [config_to_id_map]
@@ -439,6 +466,7 @@ def get_ids(config_to_id_map, config):
             ids += get_ids(config_to_id_map[p][c], config)
     return ids
 
+
 def get_all_model_steps(resampling_dir):
     step_dir = {}
     for root, dirs, files in os.walk(resampling_dir):
@@ -448,6 +476,7 @@ def get_all_model_steps(resampling_dir):
                 continue
             step_dir[int(name_split_underscore[1])] = sample_step_dir
     return step_dir
+
 
 # get all tsne embeddings
 def get_tsne_dict(experiment_folder, curr_dir):
@@ -484,16 +513,19 @@ def _get_dirichlet_energy(nets, data, num_steps, step_size, var_noise, alpha=1, 
             # Do OU step with EM discretization
             with torch.no_grad():
                 for layer_idx, ps in enumerate(net.parameters()):
-                    ps.data += torch.randn(ps.size()) * np.sqrt(var_noise*step_size)
-                    ps.data += step_size*alpha*(Xs_0[idx_net][layer_idx].data - ps.data)
-            nets_weights[idx_net] += unbiased_weight_estimate(net, data, criterion, num_samples=3, batch_size=500, max_steps=3) # max_steps and batch_size are from running some analysis. just checking
+                    ps.data += torch.randn(ps.size()) * np.sqrt(var_noise * step_size)
+                    ps.data += step_size * alpha * (Xs_0[idx_net][layer_idx].data - ps.data)
+            nets_weights[idx_net] += unbiased_weight_estimate(net, data, criterion, num_samples=3, batch_size=500,
+                                                              max_steps=3)  # max_steps and batch_size are from running some analysis. just checking
         print(i)
         # cache data
     return nets_weights
 
+
 def different_cols(df):
-    a = df.to_numpy() # df.values (pandas<0.24)
+    a = df.to_numpy()  # df.values (pandas<0.24)
     return (a[0] != a[1:]).any(0)
+
 
 def get_hp(cfs):
     filter_cols = different_cols(cfs)
@@ -501,7 +533,9 @@ def get_hp(cfs):
     hp_dict = {hp: cfs[hp].unique() for hp in hp_names}
     return hp_dict
 
-def get_dirichlet_energy(experiment_folder, model_step, num_steps=20, step_size=0.001, var_noise=0.5, alpha=1, seed=1, FCN=False):
+
+def get_dirichlet_energy(experiment_folder, model_step, num_steps=20, step_size=0.001, var_noise=0.5, alpha=1, seed=1,
+                         FCN=False):
     # init
     energy_dict = {}
 
@@ -515,7 +549,8 @@ def get_dirichlet_energy(experiment_folder, model_step, num_steps=20, step_size=
         models_dict = get_models(root, model_step)
         nets = [v for k, v in sorted(models_dict.items(), key=lambda item: int(item[0]))]
 
-        energy_dict[curr_dir] = _get_dirichlet_energy(nets, train_data, num_steps, step_size, var_noise, alpha=1, seed=1)
+        energy_dict[curr_dir] = _get_dirichlet_energy(nets, train_data, num_steps, step_size, var_noise, alpha=1,
+                                                      seed=1)
 
         # cache data
         cache_data(experiment_folder, "energy", energy_dict)
@@ -540,6 +575,7 @@ def get_stuff(experiment_folder):
 
     return stuff
 
+
 def main(experiment_name):
     # # # save analysis processsing
     # names = ["Loss", "Potential", "Accuracy", "Kish"]
@@ -549,13 +585,25 @@ def main(experiment_name):
     exp = "Jun17_18-59-59_Daniels-MacBook-Pro-4.local"
     experiment_folder = root_experiment_folder.format(exp)
 
-    get_runs(experiment_folder , ["Loss", "Kish", "Potential", "Accuracy", "WeightVarTrace", "Norm", "Trace"]) # TODO does not find acc and var
+    get_runs(experiment_folder, ["Loss", "Kish", "Potential", "Accuracy", "WeightVarTrace", "Norm",
+                                 "Trace"])  # TODO does not find acc and var
+
+
+    # init torch
+    is_gpu = False
+    if is_gpu:
+        torch.backends.cudnn.enabled = True
+        device = torch.device("cuda:0")
+    else:
+        device = None
+        # device = torch.device("cpu")
+
     #
     # get_exp_final_distances(experiment_folder)
     #
-    get_exp_trace(experiment_folder, -1, False, FCN=False)
+    get_exp_trace(experiment_folder, -1, False, FCN=False, device=device)
 
-    get_exp_loss_acc(experiment_folder, -1, FCN=False)
+    get_exp_loss_acc(experiment_folder, -1, FCN=False, device=device)
 
     # get_grad(experiment_folder, -1, False, FCN=True)
 
@@ -576,5 +624,3 @@ if __name__ == "__main__":
     # print(args)
     #
     # experiment_name = args.exp_name
-
-
