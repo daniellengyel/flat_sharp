@@ -151,7 +151,7 @@ def train(config, folder_path, train_data, test_data):
                     strength *= np.mean(mean_loss) - offset  # TODO change so we can iterate over methods
                     print(strength)
                     sampled_idx = sample_index_softmax(nets_weights, nets, beta=strength)
-                    nets = [copy.deepcopy(nets[i]) for i in sampled_idx]
+                    sample_nets(nets, copy.deepcopy(sampled_idx)) # nets = [copy.deepcopy(nets[i]) for i in sampled_idx]
                     optimizers = get_opt_func(nets, optimizers)
 
 

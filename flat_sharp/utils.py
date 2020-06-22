@@ -331,4 +331,77 @@ def unbiased_weight_estimate(net, data, criterion, num_samples=3, batch_size=500
     return np.mean(weights)
 
 
+def same_model(model1, model2):
+    params1 = model1.named_parameters()
+    params2 = model2.named_parameters()
+
+    params2_dict = dict(params2)
+    for name1, param1 in params1:
+        if name1 in params2_dict:
+            if not torch.equal(params2_dict[name1].data, param1.data):
+                return False
+        else:
+            return False
+
+    return True
+
+
+def sample_nets(nets, idxs):
+    """Memory efficient method to sample nets given a sample idx array. Mutates nets and idxs.
+        Step 1: check if there are leaf nodes i.e. models which are not spawn particles. We can safely assign 
+                new weights to those. Notice, these particles have now also become spawn particles, so some permutation 
+                cycles are broken now.
+        Step 2: If there is a permutation cycle left, we keep one temporary variable and fix the rest of the permutation 
+                cycle. This can only happen if none of the particles ever had a leaf node attached to them.
+            """
+    unique_s = set(idxs)
+
+    # leaf routine
+    replace_dict = {}
+    saw_leaf = False
+    we_done = True
+    for p in range(len(idxs)):
+        s = idxs[p]
+        we_done = we_done and (p == s)
+        if p not in unique_s:
+            saw_leaf = True
+            # mutate net
+            nets[p].load_state_dict(nets[s].state_dict())  # nets[p] = nets[s]
+
+            # change idxs to indicate we have updated this net
+            idxs[p] = p
+            if s not in replace_dict:
+                replace_dict[s] = p
+
+    if we_done:
+        return
+
+    if saw_leaf:
+        for i in range(len(idxs)):
+            if i == idxs[i]:
+                continue
+            if idxs[i] in replace_dict:
+                idxs[i] = replace_dict[idxs[i]]
+        sample_nets(nets, idxs)
+    else:
+        # cycle routine
+        for i in range(len(idxs)):
+            if (i == idxs[i]):
+                continue
+            else:
+                tmp_net = copy.deepcopy(nets[i])  # tmp_net = nets[i]
+                curr_p = i
+                prev_p = idxs[i]
+                while prev_p != i:
+                    nets[curr_p].load_state_dict(nets[prev_p].state_dict())  # nets[curr_p] = nets[prev_p]
+
+                    idxs[curr_p] = curr_p
+                    curr_p = prev_p
+                    prev_p = idxs[curr_p]
+                nets[curr_p].load_state_dict(tmp_net.state_dict())  # nets[curr_p] = tmp_net
+                idxs[curr_p] = curr_p
+
+
+
+
 

@@ -35,3 +35,18 @@ for i in range(100):
     Ys.append((sum_tmp_ys.dot(sum_tmp_ys) - sum_squared) * (1. / (N * (N - 1))))
 
 print(np.mean(Ys))
+
+m = m = [exp_dict["models"]["1592258035.9073222"][str(i)] for i in range(20)] # np.random.randint(0, 100, size=100)
+idxs =  np.random.choice(list(range(len(m))), len(m))
+a = time.time()
+m_right = [copy.deepcopy(m[i]) for i in idxs]
+b = time.time()
+sample_nets(m, idxs)
+c = time.time()
+assert all([same_model(m[i], m_right[i]) for i in range(len(m))])
+
+print(idxs)
+
+print(b - a)
+print(c - b)
+
