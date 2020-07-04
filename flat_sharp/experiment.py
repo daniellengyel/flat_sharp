@@ -69,7 +69,7 @@ config["momentum"] = 0
 
 config["num_nets"] = 20  # would like to make it like other one, where we can define region to initialize
 
-config["softmax_beta"] = tune.grid([-50, 50]) #tune.grid_search([0] + list(-1*np.linspace(1, 100, 5)) + list(np.linspace(1, 100, 5))) # e.g. negtive to prioritize low weights
+config["softmax_beta"] = tune.grid_search([-50, 50]) #tune.grid_search([0] + list(-1*np.linspace(1, 100, 5)) + list(np.linspace(1, 100, 5))) # e.g. negtive to prioritize low weights
 # offset = tune.grid_search([0.5, 0.25, 0.1])
 config["softmax_adaptive"] = None  # [offset, 1000] # offset, and strength
 
