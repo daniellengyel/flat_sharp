@@ -242,7 +242,10 @@ def _training_step(nets, nets_weights, net_optimizers, net_data_loaders, criteri
         if var_noise is not None:
             with torch.no_grad():
                 for param in net.parameters():
-                    param.add_(torch.randn(param.size()) * var_noise)
+                    noise = torch.randn(param.size()) * var_noise
+                    if device is not None:
+                        noise = noise.to(device)
+                    param.add_(noise)
 
         # update weights
         if weight_type == "input_output_forbenius":
