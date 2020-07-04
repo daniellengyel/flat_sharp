@@ -572,7 +572,7 @@ def get_dirichlet_energy(experiment_folder, model_step, num_steps=20, step_size=
 def get_stuff(experiment_folder):
     stuff = {}
 
-    stuff_to_try = ["tsne", "runs", "trace", "acc", "dist", "loss", "grad"]
+    stuff_to_try = ["tsne", "runs", "trace", "acc", "dist", "loss", "grad", "eig"]
 
     for singular_stuff in stuff_to_try:
         print("Getting {}.".format(singular_stuff))
@@ -615,7 +615,7 @@ def main(experiment_name):
     #
     # get_exp_final_distances(experiment_folder, device=device)
 
-    get_exp_eig(experiment_folder, -1, num_eigenthings=5, FCN=True, device=device):
+    get_exp_eig(experiment_folder, -1, num_eigenthings=5, FCN=True, device=device)
     # get_exp_trace(experiment_folder, -1, False, FCN=True, device=device)
 
     # get_exp_loss_acc(experiment_folder, -1, FCN=True, device=device)
