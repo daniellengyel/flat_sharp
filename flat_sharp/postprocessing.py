@@ -165,13 +165,19 @@ def get_postprocessing_data(experiment_folder, vectorized=True):
 
 
 # get eigenvalues of specific model folder.
-def get_models_eig(models, train_loader, test_loader, loss, num_eigenthings=5, use_gpu=False, full_dataset=True):
+def get_models_eig(models, train_loader, test_loader, loss, num_eigenthings=5, full_dataset=True, device=None):
     eig_dict = {}
     # get eigenvals
     for k, m in models.items():
         print(k)
+        if device is not  None:
+            m = m.to(device)
+            is_gpu = True
+        else:
+            is_gpu = False
+
         eigenvals, eigenvecs = compute_hessian_eigenthings(m, train_loader,
-                                                           loss, num_eigenthings, use_gpu=use_gpu,
+                                                           loss, num_eigenthings, use_gpu=is_gpu,
                                                            full_dataset=full_dataset, mode="lanczos",
                                                            max_steps=100, tol=1e-2)
         try:
@@ -186,7 +192,7 @@ def get_models_eig(models, train_loader, test_loader, loss, num_eigenthings=5, u
 
 
 # get eigenvalues of specific model folder.
-def get_exp_eig(experiment_folder, step, num_eigenthings=5, use_gpu=False, FCN=False):
+def get_exp_eig(experiment_folder, step, num_eigenthings=5, FCN=False, device=None):
     # init
     eigenvalue_dict = {}
     loss = torch.nn.CrossEntropyLoss()
@@ -204,7 +210,7 @@ def get_exp_eig(experiment_folder, step, num_eigenthings=5, use_gpu=False, FCN=F
         print(curr_dir)
         models_dict = get_models(root, step)
         eigenvalue_dict[curr_dir] = get_models_eig(models_dict, train_loader, test_loader, loss, num_eigenthings,
-                                                   use_gpu, full_dataset=True)
+                                                   full_dataset=True, device=device)
 
         # cache data
         cache_data(experiment_folder, "eig", eigenvalue_dict)
@@ -328,7 +334,7 @@ def get_models_loss_acc(models, train_loader, test_loader, device=None):
     acc_dict = {}
 
     for k, m in models.items():
-        if device is not  None:
+        if device is not None:
             m = m.to(device)
         loss_dict[k] = (get_net_loss(m, train_loader, device=device), get_net_loss(m, test_loader, device=device))
         acc_dict[k] = (
@@ -595,7 +601,7 @@ def main(experiment_name):
 
 
     # init torch
-    is_gpu = False
+    is_gpu = True
     if is_gpu:
         torch.backends.cudnn.enabled = True
         device = torch.device("cuda:0")
@@ -608,10 +614,11 @@ def main(experiment_name):
 
     #
     # get_exp_final_distances(experiment_folder, device=device)
-    #
+
+    get_exp_eig(experiment_folder, -1, num_eigenthings=5, FCN=True, device=device):
     # get_exp_trace(experiment_folder, -1, False, FCN=True, device=device)
 
-    get_exp_loss_acc(experiment_folder, -1, FCN=True, device=device)
+    # get_exp_loss_acc(experiment_folder, -1, FCN=True, device=device)
 
     # get_grad(experiment_folder, -1, False, FCN=True)
 
