@@ -45,7 +45,7 @@ def tb_to_dict(path_to_events_file, names):
     return tb_dict
 
 
-def get_models(model_folder_path, step):
+def get_models(model_folder_path, step, device=None):
     if step == -1:
         largest_step = -float("inf")
         for root, dirs, files in os.walk(model_folder_path):
@@ -64,7 +64,10 @@ def get_models(model_folder_path, step):
         for net_file_name in files:
             net_idx = net_file_name.split("_")[1].split(".")[0]
             with open(os.path.join(root, net_file_name), "rb") as f:
-                net = torch.load(f)
+                if device is None:
+                    net = torch.load(f, map_location=torch.device('cpu'))
+                else:
+                    net = torch.load(f, map_location=device)
             nets_dict[net_idx] = net
 
     return nets_dict
@@ -397,7 +400,7 @@ def get_models_final_distances(beginning_models, final_models):
     return dist_arr
 
 
-def get_exp_final_distances(experiment_folder):
+def get_exp_final_distances(experiment_folder, device=None):
     # init
     dist_dict = {}
 
@@ -408,8 +411,8 @@ def get_exp_final_distances(experiment_folder):
 
         root = os.path.join("{}/resampling".format(experiment_folder), curr_dir)
         print(curr_dir)
-        beginning_models_dict = get_models(root, 0)
-        final_models_dict = get_models(root, -1)
+        beginning_models_dict = get_models(root, 0, device)
+        final_models_dict = get_models(root, -1, device)
         dist_dict[curr_dir] = get_models_final_distances(beginning_models_dict, final_models_dict)
 
         # cache data
@@ -583,15 +586,14 @@ def main(experiment_name):
 
     root_folder = os.environ["PATH_TO_FLAT_FOLDER"]
     data_name = "CIFAR10"
-    exp = "SimpleNet_good"
+    exp = "Jul03_12-49-26_Daniels-MacBook-Pro-4.local"
     experiment_folder = os.path.join(root_folder, "experiments", data_name, exp)
 
-    get_runs(experiment_folder, ["Loss", "Kish", "Potential", "Accuracy", "WeightVarTrace", "Norm",
-                                 "Trace"])  # TODO does not find acc and var
+
 
 
     # init torch
-    is_gpu = True
+    is_gpu = False
     if is_gpu:
         torch.backends.cudnn.enabled = True
         device = torch.device("cuda:0")
@@ -599,12 +601,15 @@ def main(experiment_name):
         device = None
         # device = torch.device("cpu")
 
-    #
-    # get_exp_final_distances(experiment_folder)
-    #
-    get_exp_trace(experiment_folder, -1, False, FCN=False, device=device)
+    get_runs(experiment_folder, ["Loss", "Kish", "Potential", "Accuracy", "WeightVarTrace", "Norm",
+                             "Trace"])  # TODO does not find acc and var
 
-    get_exp_loss_acc(experiment_folder, -1, FCN=False, device=device)
+    #
+    # get_exp_final_distances(experiment_folder, device=device)
+    #
+    get_exp_trace(experiment_folder, -1, False, FCN=True, device=device)
+
+    get_exp_loss_acc(experiment_folder, -1, FCN=True, device=device)
 
     # get_grad(experiment_folder, -1, False, FCN=True)
 

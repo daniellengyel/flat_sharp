@@ -38,12 +38,13 @@ def get_linages_vals(lineages, val_arr, x_arr=None):
     arr_lineages = np.array(list(lineages.values())).T
     # if x_arr is not None:
     #     arr_lineages = arr_lineages[x_arr]
-    return np.array(take_slice(val_arr, arr_lineages)).T
-
+    lin_vals = np.array(take_slice(val_arr, arr_lineages)).T
+    return {k: lin_vals[i] for i, k in enumerate(lineages.keys())}
 
 def get_exp_lineages(exp_dict, x_vals, y_vals, exp_ids, is_mean=False):
     y_lin_arr = []
     for i, exp_id in enumerate(exp_ids):
+
         sampling_arr = exp_dict["resampling_idxs"][exp_id]
         if len(sampling_arr) <= 2:
             Ys = y_vals[i].T
@@ -51,11 +52,13 @@ def get_exp_lineages(exp_dict, x_vals, y_vals, exp_ids, is_mean=False):
             resampling_arr = np.array([sampling_arr[str(i)] for i in range(len(sampling_arr))])[1:-1] # Note, each element is the parent particle that was chosen. So the lineages are shifted to align with the values.
 
             curr_lineage, curr_assignments = find_lineages(resampling_arr)
-            Ys = get_linages_vals(curr_lineage,  y_vals[i], x_arr=x_vals[i])
+            Ys = list(get_linages_vals(curr_lineage,  y_vals[i], x_arr=x_vals[i]).values())
         if is_mean:
             Ys = np.mean(Ys, axis=0)
         y_lin_arr.append(Ys)
-    return np.array(y_lin_arr)
+    y_lin_arr = np.array(y_lin_arr)
+    y_lin_arr = np.concatenate(y_lin_arr, axis=0)
+    return y_lin_arr
 
 
 def take_slice(a, idxs):

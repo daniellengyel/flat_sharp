@@ -114,13 +114,19 @@ def train(config, folder_path, train_data, test_data):
                 print("Mean Sampling Weights: {}".format(np.mean(nets_weights)))
 
             # do update step for each net
-            nets, nets_weights, took_step, mean_loss_after_step = _training_step(nets, nets_weights, optimizers,
+            if config["hard_train_eps"] is None:
+                nets, nets_weights, steps_taken, mean_loss_after_step = _training_step(nets, nets_weights, optimizers,
+                                                                                 net_data_loaders, criterion,
+                                                                                 weight_type, var_noise=config["var_noise"], curr_step=curr_step,
+                                                                                 writer=writer, device=device)
+            else:
+                nets, nets_weights, steps_taken, mean_loss_after_step = _hard_training_step(nets, nets_weights, optimizers,
                                                                                  net_data_loaders, criterion,
                                                                                  weight_type, curr_step=curr_step,
-                                                                                 writer=writer, device=device)
+                                                                                 writer=writer, device=device, hard_train_eps=config["hard_train_eps"])
 
             # if is_training_curr is returned false by _training_step it means we didn't take a step
-            if not took_step:
+            if steps_taken == 0:
                 break
             else:
                 mean_loss = mean_loss_after_step
@@ -157,7 +163,7 @@ def train(config, folder_path, train_data, test_data):
 
                 elif beta != 0:
                     sampled_idx = sample_index_softmax(nets_weights, nets, beta=beta)
-                    nets = [copy.deepcopy(nets[i]) for i in sampled_idx]
+                    sample_nets(nets, copy.deepcopy(sampled_idx)) # nets = [copy.deepcopy(nets[i]) for i in sampled_idx]
                     optimizers = get_opt_func(nets, optimizers)
 
 
@@ -174,7 +180,7 @@ def train(config, folder_path, train_data, test_data):
                 is_training_curr = False
 
             # update curr_step
-            curr_step += 1
+            curr_step += steps_taken
 
         # get test error
         for idx_net in range(num_nets):
@@ -200,6 +206,7 @@ def _training_step(nets, nets_weights, net_optimizers, net_data_loaders, criteri
     """Does update step on all networks and computes the weights.
     If wanting to do a random walk, set learning rate of net_optimizer to zero and set var_noise to noise level."""
     taking_step = True
+    steps_taken = 0
 
     mean_loss = 0
 
@@ -273,7 +280,85 @@ def _training_step(nets, nets_weights, net_optimizers, net_data_loaders, criteri
                 # print("Getting trace took {}".format(time.time() - a))
 
         mean_loss += float(loss)
+        steps_taken += 1
 
     assert taking_step or (idx_net == 0)
 
-    return nets, nets_weights, taking_step, mean_loss / len(nets)
+    return nets, nets_weights, steps_taken, mean_loss / len(nets)
+
+
+def _hard_training_step(nets, nets_weights, net_optimizers, net_data_loaders, criterion, weight_type, var_noise=None,
+                   curr_step=0, writer=None, device=None, hard_train_eps=None):
+    """Does update step on all networks and computes the weights.
+    If wanting to do a random walk, set learning rate of net_optimizer to zero and set var_noise to noise level."""
+    taking_step = True
+    steps_taken = 0
+
+    mean_loss = 0
+    curr_loss = float("inf")
+
+    assert not (hard_train_eps and (len(nets) > 0))
+    continue_training = True
+
+    for idx_net in range(len(nets)):
+
+        # get net and optimizer
+        net = nets[idx_net]
+        optimizer = net_optimizers[idx_net]
+
+        # get the inputs; data is a list of [inputs, labels]
+        try:
+            data = next(net_data_loaders[idx_net])
+        except:
+            taking_step = False
+            break
+        inputs, labels = data
+        if device is not None:
+            inputs, labels = inputs.to(device).type(torch.cuda.FloatTensor), labels.to(device).type(
+                torch.cuda.LongTensor)
+
+        while continue_training:
+
+            # Compute gradients for input.
+            inputs.requires_grad = True
+
+            # zero the parameter gradients
+            optimizer.zero_grad()
+
+            # forward + backward + optimize
+            outputs = net(inputs)
+            loss = criterion(outputs, labels)
+            loss.backward(retain_graph=True)
+            optimizer.step()
+
+            if var_noise is not None:
+                with torch.no_grad():
+                    for param in net.parameters():
+                        param.add_(torch.randn(param.size()) * var_noise)
+
+            # update weights
+            param_grads = get_grad_params_vec(net)
+            curr_weight = torch.norm(param_grads)
+            nets_weights[idx_net] += curr_weight
+
+
+            # store metrics for each net
+            if writer is not None:
+                writer.add_scalar('Loss/train/net_{}'.format(idx_net), loss, curr_step)
+                writer.add_scalar('Potential/curr/net_{}'.format(idx_net), curr_weight, curr_step)
+                writer.add_scalar('Norm/net_{}'.format(idx_net), torch.norm(get_params_vec(net)), curr_step)
+                if (curr_step % 50) == 0:
+                    # a = time.time()
+                    is_gpu = device is not None
+                    trace = np.mean(hessian(net, criterion, data=(inputs, labels), cuda=is_gpu).trace())
+                    writer.add_scalar('Trace/net_{}'.format(idx_net), trace, curr_step)
+                    # print("Getting trace took {}".format(time.time() - a))
+
+            mean_loss += float(loss)
+            steps_taken += 1
+            curr_step += 1
+            continue_training = float(loss) > hard_train_eps
+
+    assert taking_step or (idx_net == 0)
+
+    return nets, nets_weights, steps_taken, mean_loss / steps_taken

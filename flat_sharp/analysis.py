@@ -2,6 +2,8 @@ import numpy as np
 import pandas as pd
 import pickle, os
 import matplotlib.pyplot as plt
+import matplotlib as mpl
+from cycler import cycler
 import torch
 from torch.utils.data import DataLoader
 import sys
@@ -176,12 +178,15 @@ def _plot(plots, plots_names, X_axis_name, Y_axis_name, X_axis_bounds, Y_axis_bo
         plt.xlim(X_axis_bounds)
     if Y_axis_bounds is not None:
         plt.ylim(Y_axis_bounds)
+
+    color = plt.cm.tab20(np.arange(12))
+    mpl.rcParams['axes.prop_cycle'] = cycler('color', color) # plt.cm.Set3(np.arange(12))))
     if save_location is not None:
-        plt.savefig(save_location)
+        plt.savefig(save_location + ".png")#, format='eps')
     plt.show()
 
 
-def plot_stats(stats_pd, X_axis_name, Y_axis_name, filter_seperate=None, filter_not_seperate=None, save_exp_path=None, X_axis_bounds=None,
+def plot_stats(stats_pd, X_axis_name, Y_axis_name, Z_axis_name=None, filter_seperate=None, filter_not_seperate=None, save_exp_path=None, X_axis_bounds=None,
                Y_axis_bounds=None, X_axis_display_name=None, Y_axis_display_name=None):
     plots = []
     plots_names = []
@@ -194,7 +199,7 @@ def plot_stats(stats_pd, X_axis_name, Y_axis_name, filter_seperate=None, filter_
         plots_names.append("Plot all")
         if save_exp_path is not None:
             save_location = os.path.join(save_exp_path,
-                                         "{}_{}_{}.png".format(X_axis_name, Y_axis_name.replace("/", "-"), str("all")))
+                                         "{}_{}_{}".format(X_axis_name, Y_axis_name.replace("/", "-"), str("all")))
         else:
             save_location = None
 
@@ -227,12 +232,14 @@ def plot_stats(stats_pd, X_axis_name, Y_axis_name, filter_seperate=None, filter_
 
                 x_values = filter_pd[X_axis_name].to_numpy()
                 y_values = filter_pd[Y_axis_name].to_numpy()
+                if Z_axis_name is not None:
+                    y_values = filter_pd[Y_axis_name].to_numpy()
 
                 plots.append(plt.scatter(x_values, y_values))
                 plots_names.append(comb)
 
             if save_exp_path is not None:
-                save_location = os.path.join(save_exp_path, "{}_{}_{}.png".format(X_axis_name, Y_axis_name.replace("/", "-"), str(s_comb)))
+                save_location = os.path.join(save_exp_path, "{}_{}_{}".format(X_axis_name, Y_axis_name.replace("/", "-"), str(s_comb)))
             else:
                 save_location = None
 
@@ -409,8 +416,41 @@ def get_selector_mod(exp_dict, axis_name):
 
     name_split = name.split(" ")
 
+    tmp_cache = {}
+
     def helper(exp_id, nn_idx):
-        if name_split[0] == "grad":
+        if name_split[0] ==  "path":
+            if exp_id not in tmp_cache:
+                # get mean total path weigth
+                Y_axis_name = "Potential/curr"
+
+                x_vals, y_vals = get_runs_arr(exp_dict, Y_axis_name, exp_ids=[exp_id], is_mean=False)
+                print(y_vals.shape)
+                try:
+                    sampling_arr = exp_dict["resampling_idxs"][exp_id]
+                    resampling_arr = np.array([sampling_arr[str(i)] for i in range(len(sampling_arr))])[1:-1]
+
+                    curr_lineage, curr_assignments = find_lineages(resampling_arr)
+                    inverted_curr_assignments = {}
+                    for k, v in curr_assignments.items():
+                        for vv in v:
+                            inverted_curr_assignments[vv] = k
+                    Ys = get_linages_vals(curr_lineage, y_vals[0])
+                    sum_ys = [np.sum(Ys[inverted_curr_assignments[nn]]) + y_vals[0][-1][nn] for nn in range(y_vals.shape[2])]
+
+                except:
+                    Ys = y_vals[0].T
+                    # print("Did not use lineages for {}".format(exp_id))
+                    sum_ys = [np.sum(Ys[nn]) for nn in range(y_vals.shape[2])]
+
+                tmp_cache[exp_id] = sum_ys
+
+            else:
+                return tmp_cache[exp_id][nn_idx]
+        #     stats_dict[str(exp_id)]["Path Weight Sum"] = np.mean(np.sum(Ys, axis=1))
+        elif name_split[0] in exp_dict["stuff"]["configs"].loc[exp_id]:
+            return exp_dict["stuff"]["configs"].loc[exp_id][name_split[0]]
+        elif name_split[0] == "grad":
             return exp_dict["stuff"]["grad"][exp_id][str(nn_idx)]
         elif name_split[0] == "trace":
             return np.mean(exp_dict["stuff"]["trace"][exp_id][str(nn_idx)])
@@ -473,7 +513,7 @@ def plot_special(exp_dict, X_axis_name, Y_axis_name, filter_seperate=None, filte
         plots_names.append("Plot all")
         if save_exp_path is not None:
             save_location = os.path.join(save_exp_path,
-                                         "{}_{}_{}.png".format(X_axis_name, Y_axis_name.replace("/", "-"), str("all")))
+                                         "{}_{}_{}".format(X_axis_name, Y_axis_name.replace("/", "-"), str("all")))
         else:
             save_location = None
 
@@ -508,8 +548,9 @@ def plot_special(exp_dict, X_axis_name, Y_axis_name, filter_seperate=None, filte
                 if X_axis_name == "time":
                     x_vals, y_vals = get_runs_arr(exp_dict, Y_axis_name, exp_ids, is_mean=False)
 
-                    y_vals = get_exp_lineages(exp_dict, x_vals, y_vals, exp_ids, is_mean=is_mean)
-                    plots.append(plt.plot(x_vals[0], y_vals[0])[0])
+                    plot_y_vals = get_exp_lineages(exp_dict, x_vals, y_vals, exp_ids, is_mean=is_mean)
+                    plot_x_vals = np.array([x_vals[0] for _ in range(len(plot_y_vals))])
+                    plots.append(plt.plot(plot_x_vals.T, plot_y_vals.T)[0])
 
                 else:
                     x_vals, y_vals = get_plot_special(exp_dict, exp_ids, X_axis_name, Y_axis_name)
@@ -520,7 +561,7 @@ def plot_special(exp_dict, X_axis_name, Y_axis_name, filter_seperate=None, filte
                     plots.append(plt.scatter(x_vals, y_vals))
                 plots_names.append(comb)
             if save_exp_path is not None:
-                save_location = os.path.join(save_exp_path, "{}_{}_{}.png".format(X_axis_name, Y_axis_name.replace("/", "-"), str(s_comb)))
+                save_location = os.path.join(save_exp_path, "{}_{}_{}".format(X_axis_name, Y_axis_name.replace("/", "-"), str(s_comb)))
             else:
                 save_location = None
 

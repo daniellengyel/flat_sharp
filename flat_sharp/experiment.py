@@ -56,8 +56,10 @@ config["mean_loss_threshold"] = None # 0.15
 config["batch_train_size"] = 32 # tune.grid_search([ 32, 256])
 config["batch_test_size"] = 16 # tune.grid_search([16])
 
+config["var_noise"] = tune.grid_search(list(np.logspace(-4, -1, 5)))
+
 config["ess_threshold"] = None  # tune.grid_search([0.97])
-config["sampling_tau"] = 1 # tune.grid_search([1, 5]) # tune.grid_search([1, 25, 100])
+config["sampling_tau"] = 5 # tune.grid_search([1, 5]) # tune.grid_search([1, 25, 100])
 config["sampling_wait"] = 0
 config["sampling_stop"] = None
 
@@ -65,15 +67,17 @@ config["learning_rate"] = 0.1 # tune.grid_search([0.1]) # 1 # tune.grid_search(l
 # config["lr_decay"] =
 config["momentum"] = 0
 
-config["num_nets"] = 1  # would like to make it like other one, where we can define region to initialize
+config["num_nets"] = 20  # would like to make it like other one, where we can define region to initialize
 
-config["softmax_beta"] = 0 # tune.grid_search([0] + list(-1*np.linspace(1, 100, 5)) + list(np.linspace(1, 100, 5))) # e.g. negtive to prioritize low weights
+config["softmax_beta"] = [-50, 50] #tune.grid_search([0] + list(-1*np.linspace(1, 100, 5)) + list(np.linspace(1, 100, 5))) # e.g. negtive to prioritize low weights
 # offset = tune.grid_search([0.5, 0.25, 0.1])
 config["softmax_adaptive"] = None  # [offset, 1000] # offset, and strength
 
 config["weight_type"] = "loss_gradient_weights"  # "input_output_forbenius", #
 
 config["device"] = "gpu"
+
+config["hard_train_eps"] = None #  0.1
 
 if data_name == "MNIST":
     config["reduce_train_per"] = 0.1
