@@ -601,13 +601,13 @@ def main(experiment_name):
         device = None
         # device = torch.device("cpu")
 
-    get_runs(experiment_folder, ["Loss", "Kish", "Potential", "Accuracy", "WeightVarTrace", "Norm",
-                             "Trace"])  # TODO does not find acc and var
+    # get_runs(experiment_folder, ["Loss", "Kish", "Potential", "Accuracy", "WeightVarTrace", "Norm",
+    #                          "Trace"])  # TODO does not find acc and var
 
     #
     # get_exp_final_distances(experiment_folder, device=device)
     #
-    get_exp_trace(experiment_folder, -1, False, FCN=True, device=device)
+    # get_exp_trace(experiment_folder, -1, False, FCN=True, device=device)
 
     get_exp_loss_acc(experiment_folder, -1, FCN=True, device=device)
 

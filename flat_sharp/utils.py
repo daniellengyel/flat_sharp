@@ -167,8 +167,8 @@ def get_optimizers(config):
 # Viz
 
 def classification_regions_2d(v1, v2, center_image, alpha_min, alpha_max, beta_min, beta_max, N, net):
-    """ 
-    Returns the alpha (X) and beta (Y) range used in the basis of v1 and v2. Use meshgrid(X, Y) to get the corresponding 
+    """
+    Returns the alpha (X) and beta (Y) range used in the basis of v1 and v2. Use meshgrid(X, Y) to get the corresponding
     coordinates for the result. """
 
     alpha_range = np.linspace(alpha_min, alpha_max, N)
@@ -256,6 +256,7 @@ def get_net_accuracy(net, data_loader, full_dataset=False, device=None):
 
     for idx, (inputs, labels) in enumerate(data_loader):
         if device is not None:
+            print("hi")
             inputs, labels = inputs.to(device).type(torch.cuda.FloatTensor), labels.to(device).type(
                 torch.cuda.LongTensor)
         else:
@@ -348,10 +349,10 @@ def same_model(model1, model2):
 
 def sample_nets(nets, idxs):
     """Memory efficient method to sample nets given a sample idx array. Mutates nets and idxs.
-        Step 1: check if there are leaf nodes i.e. models which are not spawn particles. We can safely assign 
-                new weights to those. Notice, these particles have now also become spawn particles, so some permutation 
+        Step 1: check if there are leaf nodes i.e. models which are not spawn particles. We can safely assign
+                new weights to those. Notice, these particles have now also become spawn particles, so some permutation
                 cycles are broken now.
-        Step 2: If there is a permutation cycle left, we keep one temporary variable and fix the rest of the permutation 
+        Step 2: If there is a permutation cycle left, we keep one temporary variable and fix the rest of the permutation
                 cycle. This can only happen if none of the particles ever had a leaf node attached to them.
             """
     unique_s = set(idxs)
@@ -400,8 +401,3 @@ def sample_nets(nets, idxs):
                     prev_p = idxs[curr_p]
                 nets[curr_p].load_state_dict(tmp_net.state_dict())  # nets[curr_p] = tmp_net
                 idxs[curr_p] = curr_p
-
-
-
-
-
