@@ -50,26 +50,26 @@ elif config["net_name"] == "LeNet":
 
 config["torch_random_seed"] = 1
 
-config["num_steps"] = 6000  # tune.grid_search([25000]) # roughly 50 * 500 / 16
+config["num_steps"] = 12000  # tune.grid_search([25000]) # roughly 50 * 500 / 16
 config["mean_loss_threshold"] = None # 0.15
 
-config["batch_train_size"] = 32 # tune.grid_search([ 32, 256])
+config["batch_train_size"] = tune.grid_search([ 8, 16, 32, 128, 256, 512])
 config["batch_test_size"] = 16 # tune.grid_search([16])
 
-config["var_noise"] = tune.grid_search(list(np.logspace(-4, -1, 5)))
+config["var_noise"] = None # tune.grid_search(list(np.logspace(-4, -1, 5)))
 
 config["ess_threshold"] = None  # tune.grid_search([0.97])
 config["sampling_tau"] = 5 # tune.grid_search([1, 5]) # tune.grid_search([1, 25, 100])
 config["sampling_wait"] = 0
 config["sampling_stop"] = None
 
-config["learning_rate"] = 0.1 # tune.grid_search([0.1]) # 1 # tune.grid_search(list(np.logspace(-2, 1, 10)))
+config["learning_rate"] = tune.grid_search(list(np.logspace(-3, 0, 10))) # 0.1 # tune.grid_search([0.1]) # 1 # tune.grid_search(list(np.logspace(-2, 1, 10)))
 # config["lr_decay"] =
 config["momentum"] = 0
 
-config["num_nets"] = 20  # would like to make it like other one, where we can define region to initialize
+config["num_nets"] = 5  # would like to make it like other one, where we can define region to initialize
 
-config["softmax_beta"] = tune.grid_search([-50, 50]) #tune.grid_search([0] + list(-1*np.linspace(1, 100, 5)) + list(np.linspace(1, 100, 5))) # e.g. negtive to prioritize low weights
+config["softmax_beta"] = 0 # tune.grid_search([-50, 50]) #tune.grid_search([0] + list(-1*np.linspace(1, 100, 5)) + list(np.linspace(1, 100, 5))) # e.g. negtive to prioritize low weights
 # offset = tune.grid_search([0.5, 0.25, 0.1])
 config["softmax_adaptive"] = None  # [offset, 1000] # offset, and strength
 
