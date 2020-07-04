@@ -328,6 +328,8 @@ def get_models_loss_acc(models, train_loader, test_loader, device=None):
     acc_dict = {}
 
     for k, m in models.items():
+        if device is not  None:
+            m = m.to(device)
         loss_dict[k] = (get_net_loss(m, train_loader, device=device), get_net_loss(m, test_loader, device=device))
         acc_dict[k] = (
         get_net_accuracy(m, train_loader, device=device), get_net_accuracy(m, test_loader, device=device))
