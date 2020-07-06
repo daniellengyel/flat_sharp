@@ -283,11 +283,10 @@ def _training_step(nets, nets_weights, net_optimizers, net_data_loaders, criteri
                 # print("Getting trace took {}".format(time.time() - a))
 
         mean_loss += float(loss)
-        steps_taken += 1
 
     assert taking_step or (idx_net == 0)
 
-    return nets, nets_weights, steps_taken, mean_loss / len(nets)
+    return nets, nets_weights, 1*taking_step, mean_loss / len(nets)
 
 
 def _hard_training_step(nets, nets_weights, net_optimizers, net_data_loaders, criterion, weight_type, var_noise=None,

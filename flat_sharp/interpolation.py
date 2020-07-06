@@ -20,6 +20,23 @@ def interpolate_models(model1, model2, beta):
 
     return new_model
 
+def scale_output_model(model1, alpha):
+    if isinstance(model1, LeNet):
+        last_layer_names = ["fc3.weight", "fc3.bias"]
+    else:
+        last_layer_names = ["fc2.weight", "fc2.bias"]
+
+    params1 = model1.named_parameters()
+
+    new_model = copy.deepcopy(model1)
+    new_params = new_model.named_parameters()
+    dict_new_params = dict(new_params)
+    for name1, param1 in params1:
+        if name1 in last_layer_names:
+            dict_new_params[name1].data.copy_(alpha * param1.data)
+            
+    return new_model
+
 
 def T_alpha_models(model, num_inter_models, alpha_range):
     inter_models_arr = []

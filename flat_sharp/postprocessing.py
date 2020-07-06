@@ -165,7 +165,7 @@ def get_postprocessing_data(experiment_folder, vectorized=True):
 
 
 # get eigenvalues of specific model folder.
-def get_models_eig(models, train_loader, test_loader, loss, num_eigenthings=5, full_dataset=True, device=None):
+def get_models_eig(models, train_loader, test_loader, loss, num_eigenthings=5, full_dataset=True, device=None, only_vals=True):
     eig_dict = {}
     # get eigenvals
     for k, m in models.items():
@@ -184,7 +184,10 @@ def get_models_eig(models, train_loader, test_loader, loss, num_eigenthings=5, f
             #     eigenvals, eigenvecs = compute_hessian_eigenthings(m, train_loader,
             #                                                        loss, num_eigenthings, use_gpu=use_gpu, full_dataset=full_dataset , mode="lanczos",
             #                                                        max_steps=50)
-            eig_dict[k] = (eigenvals, eigenvecs)
+            if only_vals:
+                eig_dict[k] = eigenvals
+            else:
+                eig_dict[k] = (eigenvals, eigenvecs)
         except:
             print("Error for net {}.".format(k))
 
@@ -192,7 +195,7 @@ def get_models_eig(models, train_loader, test_loader, loss, num_eigenthings=5, f
 
 
 # get eigenvalues of specific model folder.
-def get_exp_eig(experiment_folder, step, num_eigenthings=5, FCN=False, device=None):
+def get_exp_eig(experiment_folder, step, num_eigenthings=5, FCN=False, device=None, only_vals=True):
     # init
     eigenvalue_dict = {}
     loss = torch.nn.CrossEntropyLoss()
@@ -210,7 +213,7 @@ def get_exp_eig(experiment_folder, step, num_eigenthings=5, FCN=False, device=No
         print(curr_dir)
         models_dict = get_models(root, step)
         eigenvalue_dict[curr_dir] = get_models_eig(models_dict, train_loader, test_loader, loss, num_eigenthings,
-                                                   full_dataset=True, device=device)
+                                                   full_dataset=True, device=device, only_vals=only_vals)
 
         # cache data
         cache_data(experiment_folder, "eig", eigenvalue_dict)

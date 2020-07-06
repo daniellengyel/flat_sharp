@@ -448,6 +448,12 @@ def get_selector_mod(exp_dict, axis_name):
             else:
                 return tmp_cache[exp_id][nn_idx]
         #     stats_dict[str(exp_id)]["Path Weight Sum"] = np.mean(np.sum(Ys, axis=1))
+        elif name_split[0] == "eigs":
+            eigs = exp_dict["stuff"]["eig"][exp_id][str(nn_idx)]
+            if name_split[1] == "min":
+                return min(eigs)
+            else:
+                return max(eigs)
         elif name_split[0] in exp_dict["stuff"]["configs"].loc[exp_id]:
             return exp_dict["stuff"]["configs"].loc[exp_id][name_split[0]]
         elif name_split[0] == "grad":
@@ -549,6 +555,7 @@ def plot_special(exp_dict, X_axis_name, Y_axis_name, filter_seperate=None, filte
                     x_vals, y_vals = get_runs_arr(exp_dict, Y_axis_name, exp_ids, is_mean=False)
 
                     plot_y_vals = get_exp_lineages(exp_dict, x_vals, y_vals, exp_ids, is_mean=is_mean)
+                    print(x_vals)
                     plot_x_vals = np.array([x_vals[0] for _ in range(len(plot_y_vals))])
                     plots.append(plt.plot(plot_x_vals.T, plot_y_vals.T)[0])
 
