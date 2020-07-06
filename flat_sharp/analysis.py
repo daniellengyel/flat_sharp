@@ -555,8 +555,11 @@ def plot_special(exp_dict, X_axis_name, Y_axis_name, filter_seperate=None, filte
                     x_vals, y_vals = get_runs_arr(exp_dict, Y_axis_name, exp_ids, is_mean=False)
 
                     plot_y_vals = get_exp_lineages(exp_dict, x_vals, y_vals, exp_ids, is_mean=is_mean)
-                    print(x_vals)
                     plot_x_vals = np.array([x_vals[0] for _ in range(len(plot_y_vals))])
+                    # print(plot_y_vals.shape)
+                    # if plot_y_vals.shape[0] == 1:
+                    #     plots.append(plt.plot(plot_x_vals, plot_y_vals)[0])
+                    # else:
                     plots.append(plt.plot(plot_x_vals.T, plot_y_vals.T)[0])
 
                 else:
