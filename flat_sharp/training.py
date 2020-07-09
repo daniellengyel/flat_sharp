@@ -115,7 +115,7 @@ def train(config, folder_path, train_data, test_data):
 
             # do update step for each net
             if config["hard_train_eps"] is None:
-                nets, nets_weights, steps_taken, mean_loss_after_step = _training_step(nets, nets_weights, optimizers,
+                nets, nets_weights, steps_taken, mean_loss_after_step = training_step(nets, nets_weights, optimizers,
                                                                                  net_data_loaders, criterion,
                                                                                  weight_type, var_noise=config["var_noise"], curr_step=curr_step,
                                                                                  writer=writer, device=device)
@@ -201,7 +201,7 @@ def train(config, folder_path, train_data, test_data):
     return nets
 
 
-def _training_step(nets, nets_weights, net_optimizers, net_data_loaders, criterion, weight_type, var_noise=None,
+def training_step(nets, nets_weights, net_optimizers, net_data_loaders, criterion, weight_type, var_noise=None,
                    curr_step=0, writer=None, device=None):
     """Does update step on all networks and computes the weights.
     If wanting to do a random walk, set learning rate of net_optimizer to zero and set var_noise to noise level."""

@@ -12,7 +12,7 @@ PATH_TO_DATA = "{}/data".format(os.environ["PATH_TO_FLAT_FOLDER"])
 def get_data(data_name, vectorized=False, reduce_train_per=None):
     if data_name == "gaussian":
         train_data, test_data = _get_gaussian()
-    if data_name == "mis_gauss":
+    elif data_name == "mis_gauss":
         train_data, test_data = _get_mis_gauss()
     elif data_name == "MNIST":
         train_data, test_data = _get_MNIST()
